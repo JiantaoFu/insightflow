@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { ArrowRight, Users, Target, LineChart, ZapIcon, ArrowRightIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -161,14 +162,17 @@ const Index = () => {
                   <h3 className="text-xl font-semibold mb-3">{step.title}</h3>
                   <p className="text-muted-foreground">{step.description}</p>
                   
+                  {/* Add arrow for all cards except the last one */}
                   {index < 3 && (
-                    <div className="absolute -right-4 left-[calc(100%)] top-1/2 transform -translate-y-1/2 -translate-x-1/2 hidden md:flex items-center justify-center z-10">
+                    <div className="absolute -right-4 top-1/2 transform -translate-y-1/2 hidden md:block z-10">
                       <ArrowRightIcon className="w-6 h-6 text-primary" />
                     </div>
                   )}
                 </GlassCard>
               </PageTransition>
             ))}
+
+            {/* Removing the old connection line with dots */}
           </div>
         </div>
       </section>
