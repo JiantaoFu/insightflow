@@ -8,7 +8,7 @@ const Footer = () => {
       <div className="container mx-auto px-4 py-10">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold gradient-text">InsightFlow</h3>
+            <h3 className="text-lg font-semibold branded-text">InsightFlow</h3>
             <p className="text-sm text-muted-foreground">
               Unlock product-market fit through research and customer insights.
             </p>

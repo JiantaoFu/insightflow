@@ -47,7 +47,7 @@ const Index = () => {
             
             <PageTransition transition="slide-up" duration={1000}>
               <h1 className="text-4xl md:text-6xl font-bold mb-6">
-                <span className="gradient-text">Discover insights</span> that drive product success
+                <span className="branded-text">Discover insights</span> that drive product success
               </h1>
             </PageTransition>
             
@@ -79,7 +79,7 @@ const Index = () => {
           <div className="text-center mb-16">
             <PageTransition transition="slide-up">
               <h2 className="text-3xl md:text-4xl font-bold mb-4">
-                Research-driven insights for <span className="gradient-text">confident decisions</span>
+                Research-driven insights for <span className="accent-text">confident decisions</span>
               </h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
                 InsightFlow streamlines the user research process with AI-powered tools that help you understand your customers.
@@ -114,7 +114,7 @@ const Index = () => {
           <div className="text-center mb-16">
             <PageTransition transition="slide-up">
               <h2 className="text-3xl md:text-4xl font-bold mb-4">
-                How <span className="gradient-text">InsightFlow</span> works
+                How <span className="highlight-text">InsightFlow</span> works
               </h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
                 A streamlined process for gathering and analyzing user insights.
@@ -181,7 +181,7 @@ const Index = () => {
           <PageTransition transition="scale">
             <GlassCard className="max-w-5xl mx-auto text-center p-10 md:p-16">
               <h2 className="text-3xl md:text-4xl font-bold mb-6">
-                Ready to unlock <span className="gradient-text">product-market fit</span>?
+                Ready to unlock <span className="accent-text">product-market fit</span>?
               </h2>
               <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
                 Start gathering meaningful insights from your customers today and build products they'll love.
