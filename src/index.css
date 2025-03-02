@@ -123,7 +123,8 @@
   }
 
   .gradient-text {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-insight-dark via-insight to-insight-light;
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-insight-dark via-insight to-insight-light font-bold;
+    text-shadow: 0 0 1px rgba(0,0,0,0.1);
   }
 
   .scrollbar-hidden {

@@ -35,12 +35,12 @@ const Index = () => {
     <div className="min-h-screen">
       {/* Hero Section */}
       <section className="relative py-16 md:py-24 overflow-hidden">
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full bg-gradient-to-tr from-primary/5 via-primary/10 to-transparent blur-3xl" />
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full bg-gradient-to-tr from-primary/10 via-primary/15 to-transparent blur-3xl" />
         
         <div className="container mx-auto px-4 relative z-10">
           <div className="max-w-4xl mx-auto text-center">
             <PageTransition transition="slide-up" duration={800}>
-              <div className="inline-block mb-3 px-3 py-1 bg-primary/10 rounded-full">
+              <div className="inline-block mb-3 px-3 py-1 bg-primary/15 rounded-full">
                 <span className="text-sm font-medium text-primary">Unlock Product-Market Fit</span>
               </div>
             </PageTransition>

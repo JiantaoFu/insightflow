@@ -12,8 +12,8 @@ const GlassCard = ({ children, className, hoverEffect = false, ...props }: Glass
   return (
     <div 
       className={cn(
-        "glass rounded-2xl p-6 transition-all duration-300 ease-in-out",
-        hoverEffect && "hover:shadow-lg hover:translate-y-[-4px]",
+        "glass rounded-2xl p-6 transition-all duration-300 ease-in-out border-primary/10",
+        hoverEffect && "hover:shadow-lg hover:translate-y-[-4px] hover:border-primary/20",
         className
       )} 
       {...props}
