@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { ArrowRight, Users, Target, LineChart, ZapIcon } from 'lucide-react';
+import { ArrowRight, Users, Target, LineChart, ZapIcon, ArrowRightIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import PageTransition from '@/components/ui/PageTransition';
 import GlassCard from '@/components/common/GlassCard';
@@ -155,22 +155,24 @@ const Index = () => {
                 duration={600 + index * 200}
                 className="h-full"
               >
-                <GlassCard className="h-full flex flex-col items-center text-center" hoverEffect>
+                <GlassCard className="h-full flex flex-col items-center text-center relative" hoverEffect>
                   <div className="p-3 w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-4">
                     {step.icon}
                   </div>
                   <h3 className="text-xl font-semibold mb-3">{step.title}</h3>
                   <p className="text-muted-foreground">{step.description}</p>
+                  
+                  {/* Add arrow for all cards except the last one */}
+                  {index < 3 && (
+                    <div className="absolute -right-4 top-1/2 transform -translate-y-1/2 hidden md:block z-10">
+                      <ArrowRightIcon className="w-6 h-6 text-primary" />
+                    </div>
+                  )}
                 </GlassCard>
               </PageTransition>
             ))}
 
-            {/* Connection line between steps (visible on desktop) */}
-            <div className="absolute top-1/4 left-0 right-0 h-0.5 bg-primary/20 hidden md:block">
-              <div className="absolute top-1/2 left-1/4 transform -translate-y-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-primary"></div>
-              <div className="absolute top-1/2 left-2/4 transform -translate-y-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-primary"></div>
-              <div className="absolute top-1/2 left-3/4 transform -translate-y-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-primary"></div>
-            </div>
+            {/* Removing the old connection line with dots */}
           </div>
         </div>
       </section>
