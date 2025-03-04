@@ -7,13 +7,14 @@ import QuestionCard from '@/components/interview/QuestionCard';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import questionGenerationService from '@/services/questionGenerationService';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ProjectSetup from '@/components/interview/ProjectSetup';
 
 const InterviewBuilder = () => {
+  const navigate = useNavigate();
   const [questions, setQuestions] = useState([
     {
       id: '1',
@@ -215,6 +216,39 @@ const InterviewBuilder = () => {
     setHasProjectContext(false);
   };
 
+  const handlePreviewInterview = () => {
+    // Get random audience member
+    const randomAudience = setupState.selected.audiences[
+      Math.floor(Math.random() * setupState.selected.audiences.length)
+    ];
+
+    const interviewContext = {
+      projectName: setupState.selected.name || setupState.idea,
+      objectives: setupState.selected.objectives,
+      targetAudience: setupState.selected.audiences.join(', '),
+      questions: questions.map(q => ({
+        question: q.question,
+        purpose: q.description
+      })),
+      personas: {
+        interviewer: {
+          role: 'interviewer',
+          background: "Product Research Expert specialized in " + setupState.idea,
+          expertise: ["User Research", "Product Strategy", "Market Analysis"],
+          personality: "Professional but friendly, asks insightful follow-up questions"
+        },
+        interviewee: {
+          role: 'interviewee',
+          background: `${randomAudience} interested in ${setupState.idea}`,
+          expertise: setupState.selected.objectives.map(obj => obj.split(' ').slice(0, 3).join(' ')),
+          personality: "Experienced professional with relevant domain knowledge"
+        }
+      }
+    };
+
+    navigate('/interview-simulator', { state: { interviewContext } });
+  };
+
   return (
     <PageTransition transition="fade" className="min-h-screen">
       <div className="container mx-auto px-4 py-8">
@@ -392,14 +426,13 @@ const InterviewBuilder = () => {
                   Save Draft
                 </AnimatedButton>
                 {questions.length > 0 && (
-                  <Link to="/interview-simulator">
-                    <AnimatedButton 
-                      icon={<ArrowRight size={18} />}
-                      iconPosition="right"
-                    >
-                      Preview Interview
-                    </AnimatedButton>
-                  </Link>
+                  <AnimatedButton 
+                    onClick={handlePreviewInterview}
+                    icon={<ArrowRight size={18} />}
+                    iconPosition="right"
+                  >
+                    Preview Interview
+                  </AnimatedButton>
                 )}
               </>
             ) : (

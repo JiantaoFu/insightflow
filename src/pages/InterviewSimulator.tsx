@@ -4,7 +4,7 @@ import PageTransition from '@/components/ui/PageTransition';
 import GlassCard from '@/components/common/GlassCard';
 import AnimatedButton from '@/components/common/AnimatedButton';
 import { Input } from '@/components/ui/input';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, Navigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { InterviewSimulationService } from '@/services/interviewSimulationService';
 import { ToastContainer, toast } from 'react-toastify';
@@ -18,6 +18,15 @@ interface SimMessage {
 }
 
 const InterviewSimulator = () => {
+  const location = useLocation();
+  const interviewContext = location.state?.interviewContext;
+
+  // Redirect if no context is provided
+  if (!interviewContext) {
+    return <Navigate to="/interview-builder" replace />;
+  }
+
+  const [context] = useState(interviewContext);
   const [messages, setMessages] = useState<SimMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isRecording, setIsRecording] = useState(false);
@@ -27,51 +36,24 @@ const InterviewSimulator = () => {
   const [simulationSpeed, setSimulationSpeed] = useState<'slow' | 'normal' | 'fast'>('normal');
   const [interviewState, setInterviewState] = useState<'ongoing' | 'asking_final_thoughts' | 'waiting_for_final_response' | 'completed'>('ongoing');
   
-  const [context] = useState({
-    projectName: "Product Research Interview",
-    objectives: [
-      "Understand current workflow pain points",
-      "Identify key features for MVP",
-      "Validate pricing assumptions"
-    ],
-    targetAudience: "Product Managers in SaaS companies",
-    questions: [
-      {
-        question: "What's your current process for managing product development workflows?",
-        purpose: "Understand existing workflow"
-      },
-      {
-        question: "What are the biggest challenges or pain points you face in your current workflow?",
-        purpose: "Identify pain points to address in our solution"
-      },
-      {
-        question: "What features would you consider essential for a new product management tool?",
-        purpose: "Identify key features for MVP"
-      },
-      {
-        question: "How is purchasing decisions for tools like this made in your organization?",
-        purpose: "Understand buying process"
-      },
-      {
-        question: "What would you expect to pay for a tool that solves these problems effectively?",
-        purpose: "Validate pricing assumptions"
-      }
-    ]
-  });
+  // Create default personas if not provided in context
+  const [interviewer] = useState(() => 
+    interviewContext.personas?.interviewer || {
+      role: 'interviewer' as const,
+      background: "Product Research Expert",
+      expertise: ["User Research", "Product Strategy", "Market Analysis"],
+      personality: "Professional but friendly, asks insightful follow-up questions"
+    }
+  );
 
-  const [interviewer] = useState({
-    role: 'interviewer' as const,
-    background: "Senior Product Researcher with 10+ years experience in SaaS",
-    expertise: ["User Research", "Product Strategy", "Market Analysis"],
-    personality: "Professional but friendly, asks insightful follow-up questions"
-  });
-
-  const [interviewee] = useState({
-    role: 'interviewee' as const,
-    background: "Senior Product Manager at a mid-sized SaaS company",
-    expertise: ["Product Development", "Team Management", "Agile Methodologies"],
-    personality: "Experienced professional with strong opinions on productivity tools"
-  });
+  const [interviewee] = useState(() => 
+    interviewContext.personas?.interviewee || {
+      role: 'interviewee' as const,
+      background: `${interviewContext.targetAudience}`,
+      expertise: interviewContext.objectives,
+      personality: "Experienced professional with relevant domain knowledge"
+    }
+  );
 
   const [interviewService] = useState(() => new InterviewSimulationService());
 
