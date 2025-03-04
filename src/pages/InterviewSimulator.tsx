@@ -1,78 +1,131 @@
-
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, ArrowLeft, Mic, MicOff } from 'lucide-react';
+import { Play, Pause, Save, ArrowLeft, FastForward, RotateCw, Copy } from 'lucide-react';
 import PageTransition from '@/components/ui/PageTransition';
 import GlassCard from '@/components/common/GlassCard';
 import AnimatedButton from '@/components/common/AnimatedButton';
 import { Input } from '@/components/ui/input';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { InterviewSimulationService } from '@/services/interviewSimulationService';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
-interface Message {
+interface SimMessage {
   id: string;
   content: string;
-  sender: 'user' | 'ai';
+  sender: 'interviewer' | 'interviewee';
   timestamp: Date;
 }
 
 const InterviewSimulator = () => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      content: "Hello! I'm your AI interviewer today. I'd like to learn more about your experiences with productivity tools. Could you start by telling me which tools you currently use to manage your tasks?",
-      sender: 'ai',
-      timestamp: new Date(),
-    },
-  ]);
+  const [messages, setMessages] = useState<SimMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [isSimulating, setIsSimulating] = useState(false);
+  const [simulationSpeed, setSimulationSpeed] = useState<'slow' | 'normal' | 'fast'>('normal');
+  const [interviewState, setInterviewState] = useState<'ongoing' | 'asking_final_thoughts' | 'waiting_for_final_response' | 'completed'>('ongoing');
   
+  const [context] = useState({
+    projectName: "Product Research Interview",
+    objectives: [
+      "Understand current workflow pain points",
+      "Identify key features for MVP",
+      "Validate pricing assumptions"
+    ],
+    targetAudience: "Product Managers in SaaS companies",
+    questions: [
+      {
+        question: "What's your current process for managing product development workflows?",
+        purpose: "Understand existing workflow"
+      },
+      {
+        question: "What are the biggest challenges or pain points you face in your current workflow?",
+        purpose: "Identify pain points to address in our solution"
+      },
+      {
+        question: "What features would you consider essential for a new product management tool?",
+        purpose: "Identify key features for MVP"
+      },
+      {
+        question: "How is purchasing decisions for tools like this made in your organization?",
+        purpose: "Understand buying process"
+      },
+      {
+        question: "What would you expect to pay for a tool that solves these problems effectively?",
+        purpose: "Validate pricing assumptions"
+      }
+    ]
+  });
+
+  const [interviewer] = useState({
+    role: 'interviewer' as const,
+    background: "Senior Product Researcher with 10+ years experience in SaaS",
+    expertise: ["User Research", "Product Strategy", "Market Analysis"],
+    personality: "Professional but friendly, asks insightful follow-up questions"
+  });
+
+  const [interviewee] = useState({
+    role: 'interviewee' as const,
+    background: "Senior Product Manager at a mid-sized SaaS company",
+    expertise: ["Product Development", "Team Management", "Agile Methodologies"],
+    personality: "Experienced professional with strong opinions on productivity tools"
+  });
+
+  const [interviewService] = useState(() => new InterviewSimulationService());
+
   // Auto-scroll to bottom of messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
   
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!newMessage.trim()) return;
     
-    // Add user message
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      content: newMessage,
-      sender: 'user',
-      timestamp: new Date(),
+    const userMessage = {
+      role: 'interviewee' as const,
+      content: newMessage
     };
     
     setMessages(prev => [...prev, userMessage]);
     setNewMessage('');
-    
-    // Simulate AI thinking
     setIsThinking(true);
     
-    // Simulate AI response after delay
-    setTimeout(() => {
-      const responses = [
-        "That's interesting! Could you tell me more about why you chose those specific tools?",
-        "How do these tools help you in your day-to-day work? Are there any specific features you find particularly valuable?",
-        "Have you encountered any limitations with these tools? What would make them better for your workflow?",
-        "If you could design the perfect productivity tool, what would it include that current solutions are missing?",
-        "Thank you for sharing that. How has your approach to productivity changed over time?",
-      ];
+    try {
+      const response = await interviewService.conductInterview(
+        context,
+        interviewer,
+        [...messages, userMessage]
+      );
       
-      const aiMessage: Message = {
-        id: Date.now().toString(),
-        content: responses[Math.floor(Math.random() * responses.length)],
-        sender: 'ai',
-        timestamp: new Date(),
+      const aiMessage = {
+        role: 'interviewer' as const,
+        content: response
       };
       
-      setIsThinking(false);
       setMessages(prev => [...prev, aiMessage]);
-    }, 1500);
+    } catch (error) {
+      console.error('Failed to get interviewer response:', error);
+      // TODO: Add error toast
+    } finally {
+      setIsThinking(false);
+    }
   };
-  
+
+  const handleSaveTranscript = async () => {
+    try {
+      await interviewService.saveConversation(
+        'project-id', // TODO: Get from props/context
+        messages
+      );
+      // TODO: Add success toast
+    } catch (error) {
+      console.error('Failed to save transcript:', error);
+      // TODO: Add error toast
+    }
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -84,7 +137,156 @@ const InterviewSimulator = () => {
     setIsRecording(!isRecording);
     // In a real app, this would handle speech recognition
   };
-  
+
+  const addMessageWithDelay = async (message: SimMessage) => {
+    console.log('Adding message with delay:', message);
+    const delays = {
+      slow: 8000,
+      normal: 5000,
+      fast: 1000
+    };
+
+    await new Promise(resolve => setTimeout(resolve, delays[simulationSpeed]));
+    setMessages(prev => {
+      console.log('Previous messages:', prev.length);
+      const updated = [...prev, message];
+      console.log('New messages length:', updated.length);
+      return updated;
+    });
+  };
+
+  // Add effect to monitor message changes
+  useEffect(() => {
+    console.log('Messages updated:', messages.length);
+  }, [messages]);
+
+  // Move simulation logic to useEffect
+  useEffect(() => {
+    let isMounted = true;
+
+    async function startSimulation() {
+      console.log('Starting simulation in effect');
+      setMessages([]); // Clear messages state
+      
+      try {
+        // Create a local array to track conversation
+        const conversation: SimMessage[] = [];
+
+        // Initial greeting
+        const initialMessage: SimMessage = {
+          id: Date.now().toString(),
+          content: "Hello! Thank you for participating in this research interview. I'd like to learn about your experiences with productivity tools. First, could you briefly tell me about your role?",
+          sender: 'interviewer',
+          timestamp: new Date()
+        };
+
+        if (!isMounted) return;
+        await addMessageWithDelay(initialMessage);
+        conversation.push(initialMessage);
+
+        let conversationLength = 0;
+        const maxExchanges = 20;
+
+        while (isMounted && isSimulating) {
+          console.log("Conversation length:", conversation.length);
+
+          // Interviewee's turn
+          const intervieweeResult = await interviewService.conductInterview(
+            context,
+            interviewee,
+            conversation.map(m => ({ role: m.sender, content: m.content }))
+          );
+
+          if (!isMounted || !isSimulating) break;
+          
+          const intervieweeMessage: SimMessage = {
+            id: Date.now().toString(),
+            content: intervieweeResult.content,
+            sender: 'interviewee',
+            timestamp: new Date()
+          };
+          await addMessageWithDelay(intervieweeMessage);
+          conversation.push(intervieweeMessage);  // Add to local conversation array
+
+          setInterviewState(intervieweeResult.state);
+          console.log('Interview state:', intervieweeResult.state);
+          
+          if (intervieweeResult.state === 'completed') break;
+
+          await new Promise(resolve => setTimeout(resolve, 500));
+          if (!isMounted || !isSimulating) break;
+
+          // Interviewer's turn
+          const interviewerResult = await interviewService.conductInterview(
+            context,
+            interviewer,
+            conversation.map(m => ({ role: m.sender, content: m.content }))
+          );
+
+          if (!isMounted || !isSimulating) break;
+          
+          const interviewerMessage: SimMessage = {
+            id: Date.now().toString(),
+            content: interviewerResult.content,
+            sender: 'interviewer',
+            timestamp: new Date()
+          };
+          await addMessageWithDelay(interviewerMessage);
+          conversation.push(interviewerMessage);  // Add to local conversation array
+
+          setInterviewState(interviewerResult.state);
+          console.log('Interview state:', interviewerResult.state);
+          
+          if (interviewerResult.state === 'completed') break;
+
+          conversationLength++;
+        }
+      } catch (error) {
+        console.error('Simulation error:', error);
+      } finally {
+        if (isMounted) {
+          setIsSimulating(false);
+        }
+      }
+    }
+
+    if (isSimulating) {
+      startSimulation();
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isSimulating, interviewService]); // Only depend on isSimulating
+
+  const handleStartSimulation = () => {
+    setIsSimulating(true);
+  };
+
+  const handleStopSimulation = () => {
+    setIsSimulating(false);
+  };
+
+  const handleCopyConversation = async () => {
+    try {
+      const text = messages.map(m => 
+        `${m.content}\n${m.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+      ).join('\n\n') + '\n';
+     
+      navigator.clipboard.writeText(text)
+        .then(() => {
+          toast.success('Conversation copied to clipboard!');
+        })
+        .catch((err) => {
+          console.error('Failed to copy: ', err);
+          toast.error('Failed to copy conversation');
+        });
+    } catch (error) {
+      // Handle error
+      toast.error('Failed to copy conversation');
+    }
+  };
+
   return (
     <PageTransition transition="fade" className="min-h-screen">
       <div className="container mx-auto px-4 py-8">
@@ -106,7 +308,64 @@ const InterviewSimulator = () => {
             </div>
           </div>
           
-          {/* Interview Session */}
+          {/* Simulation Controls */}
+          <div className="mb-4 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              {isSimulating ? (
+                <AnimatedButton
+                  onClick={handleStopSimulation}
+                  icon={<Pause size={18} />}
+                  variant="outline"
+                >
+                  Pause Simulation
+                </AnimatedButton>
+              ) : (
+                <AnimatedButton
+                  onClick={handleStartSimulation}
+                  icon={<Play size={18} />}
+                >
+                  Start Simulation
+                </AnimatedButton>
+              )}
+              <select
+                value={simulationSpeed}
+                onChange={(e) => setSimulationSpeed(e.target.value as any)}
+                className="rounded-md border border-input bg-background px-3 py-2"
+              >
+                <option value="slow">Slow</option>
+                <option value="normal">Normal</option>
+                <option value="fast">Fast</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <AnimatedButton
+                variant="outline"
+                size="sm"
+                onClick={() => setMessages([])}
+                icon={<RotateCw size={16} />}
+              >
+                Reset
+              </AnimatedButton>
+              <AnimatedButton
+                variant="outline"
+                size="sm"
+                onClick={handleCopyConversation}
+                icon={<Copy size={16} />}
+              >
+                Copy Conversation
+              </AnimatedButton>
+              <AnimatedButton
+                variant="outline"
+                size="sm"
+                onClick={handleSaveTranscript}
+                icon={<Save size={16} />}
+              >
+                Save Transcript
+              </AnimatedButton>
+            </div>
+          </div>
+
+          {/* Chat Interface */}
           <GlassCard className="mb-8 p-0 overflow-hidden">
             {/* Interview Header */}
             <div className="bg-secondary/50 backdrop-blur-sm p-4 border-b border-border">
@@ -129,13 +388,13 @@ const InterviewSimulator = () => {
                     key={message.id} 
                     className={cn(
                       "flex",
-                      message.sender === 'user' ? "justify-end" : "justify-start"
+                      message.sender === 'interviewee' ? "justify-end" : "justify-start"
                     )}
                   >
                     <div 
                       className={cn(
                         "max-w-[75%] rounded-2xl p-4",
-                        message.sender === 'user' 
+                        message.sender === 'interviewee' 
                           ? "bg-primary text-primary-foreground" 
                           : "bg-secondary"
                       )}
@@ -161,52 +420,10 @@ const InterviewSimulator = () => {
                 )}
                 
                 <div ref={messagesEndRef} />
-              </div>
-            </div>
-            
-            {/* Message Input */}
-            <div className="p-4 border-t border-border">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={toggleRecording}
-                  className={cn(
-                    "p-2 rounded-full",
-                    isRecording 
-                      ? "bg-destructive text-destructive-foreground" 
-                      : "bg-secondary text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  {isRecording ? <MicOff size={20} /> : <Mic size={20} />}
-                </button>
-                <Input
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Type your response..."
-                  className="flex-grow"
-                />
-                <AnimatedButton 
-                  onClick={handleSendMessage}
-                  disabled={!newMessage.trim()}
-                  size="icon"
-                >
-                  <Send size={18} />
-                </AnimatedButton>
+                <ToastContainer position="bottom-right" />
               </div>
             </div>
           </GlassCard>
-          
-          {/* Interview Controls */}
-          <div className="flex justify-between items-center">
-            <AnimatedButton variant="outline">
-              Save Transcript
-            </AnimatedButton>
-            <Link to="/insights">
-              <AnimatedButton>
-                Generate Insights
-              </AnimatedButton>
-            </Link>
-          </div>
         </div>
       </div>
     </PageTransition>
