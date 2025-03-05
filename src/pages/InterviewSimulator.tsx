@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, Save, ArrowLeft, FastForward, RotateCw, Copy } from 'lucide-react';
+import { Play, Pause, Save, ArrowLeft, FastForward, RotateCw, Copy, Info } from 'lucide-react';
 import PageTransition from '@/components/ui/PageTransition';
 import GlassCard from '@/components/common/GlassCard';
 import AnimatedButton from '@/components/common/AnimatedButton';
 import { Input } from '@/components/ui/input';
-import { Link, useLocation, Navigate } from 'react-router-dom';
+import { Link, useLocation, Navigate, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { InterviewSimulationService } from '@/services/interviewSimulationService';
 import { ToastContainer, toast } from 'react-toastify';
@@ -18,6 +18,7 @@ interface SimMessage {
 }
 
 const InterviewSimulator = () => {
+  const navigate = useNavigate();
   const location = useLocation();
   const interviewContext = location.state?.interviewContext;
 
@@ -35,6 +36,7 @@ const InterviewSimulator = () => {
   const [isSimulating, setIsSimulating] = useState(false);
   const [simulationSpeed, setSimulationSpeed] = useState<'slow' | 'normal' | 'fast'>('normal');
   const [interviewState, setInterviewState] = useState<'ongoing' | 'asking_final_thoughts' | 'waiting_for_final_response' | 'completed'>('ongoing');
+  const [hasStarted, setHasStarted] = useState(false);
   
   // Create default personas if not provided in context
   const [interviewer] = useState(() => 
@@ -269,144 +271,201 @@ const InterviewSimulator = () => {
     }
   };
 
+  const startSimulation = () => {
+    setHasStarted(true);
+    setIsSimulating(true);
+  };
+
   return (
     <PageTransition transition="fade" className="min-h-screen">
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center gap-2 mb-8">
-          <Link to="/interview-builder">
-            <AnimatedButton variant="outline" size="sm" icon={<ArrowLeft size={16} />} iconPosition="left">
-              Back to Builder
-            </AnimatedButton>
-          </Link>
+          <AnimatedButton 
+            variant="outline" 
+            size="sm" 
+            icon={<ArrowLeft size={16} />} 
+            iconPosition="left"
+            onClick={() => navigate(-1)}
+          >
+            Back
+          </AnimatedButton>
         </div>
-        
-        <div className="max-w-4xl mx-auto">
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <h1 className="text-3xl font-bold mb-2">Interview Simulator</h1>
-              <p className="text-muted-foreground">
-                Test your interview flow with our AI interviewer
-              </p>
-            </div>
-          </div>
-          
-          {/* Simulation Controls */}
-          <div className="mb-4 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              {isSimulating ? (
-                <AnimatedButton
-                  onClick={handleStopSimulation}
-                  icon={<Pause size={18} />}
-                  variant="outline"
-                >
-                  Pause Simulation
-                </AnimatedButton>
-              ) : (
-                <AnimatedButton
-                  onClick={handleStartSimulation}
-                  icon={<Play size={18} />}
-                >
-                  Start Simulation
-                </AnimatedButton>
-              )}
-              <select
-                value={simulationSpeed}
-                onChange={(e) => setSimulationSpeed(e.target.value as any)}
-                className="rounded-md border border-input bg-background px-3 py-2"
-              >
-                <option value="slow">Slow</option>
-                <option value="normal">Normal</option>
-                <option value="fast">Fast</option>
-              </select>
-            </div>
-            <div className="flex items-center gap-2">
-              <AnimatedButton
-                variant="outline"
-                size="sm"
-                onClick={() => setMessages([])}
-                icon={<RotateCw size={16} />}
-              >
-                Reset
-              </AnimatedButton>
-              <AnimatedButton
-                variant="outline"
-                size="sm"
-                onClick={handleCopyConversation}
-                icon={<Copy size={16} />}
-              >
-                Copy Conversation
-              </AnimatedButton>
-              <AnimatedButton
-                variant="outline"
-                size="sm"
-                onClick={handleSaveTranscript}
-                icon={<Save size={16} />}
-              >
-                Save Transcript
-              </AnimatedButton>
-            </div>
-          </div>
 
-          {/* Chat Interface */}
-          <GlassCard className="mb-8 p-0 overflow-hidden">
-            {/* Interview Header */}
-            <div className="bg-secondary/50 backdrop-blur-sm p-4 border-b border-border">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <span className="text-primary text-lg font-semibold">AI</span>
+        {!hasStarted ? (
+          <GlassCard className="mb-6 p-6">
+            <div className="flex items-start gap-4">
+              <Info className="w-6 h-6 text-primary mt-1" />
+              <div>
+                <h2 className="text-xl font-semibold mb-4">About Interactive Interview Simulation</h2>
+                <div className="space-y-4 text-muted-foreground">
+                  <p>This mode will simulate a real-time interview conversation based on your project context:</p>
+                  <ul className="list-disc pl-4 space-y-2">
+                    <li>Project: <span className="text-foreground">{interviewContext.projectName}</span></li>
+                    <li>Audience: <span className="text-foreground">{interviewContext.targetAudience}</span></li>
+                    <li>Questions: <span className="text-foreground">{interviewContext.questions.length} prepared</span></li>
+                  </ul>
+                  <p>The simulation will:</p>
+                  <ul className="list-disc pl-4 space-y-2">
+                    <li>Generate natural back-and-forth dialogue</li>
+                    <li>Follow up on interesting points</li>
+                    <li>Cover your prepared questions organically</li>
+                    <li>Maintain conversation context</li>
+                  </ul>
+                  <p className="mt-4 text-sm">You can adjust the simulation speed and pause at any time.</p>
                 </div>
-                <div>
-                  <h3 className="font-medium">AI Interviewer</h3>
-                  <p className="text-xs text-muted-foreground">Product Research Session</p>
-                </div>
-              </div>
-            </div>
-            
-            {/* Messages */}
-            <div className="p-6 h-[500px] overflow-y-auto scrollbar-hidden">
-              <div className="space-y-6">
-                {messages.map((message) => (
-                  <div 
-                    key={message.id} 
-                    className={cn(
-                      "flex",
-                      message.sender === 'interviewee' ? "justify-end" : "justify-start"
-                    )}
+                <div className="mt-6 flex gap-4">
+                  <select
+                    value={simulationSpeed}
+                    onChange={(e) => setSimulationSpeed(e.target.value as any)}
+                    className="rounded-md border border-input bg-background px-3 py-2"
                   >
-                    <div 
-                      className={cn(
-                        "max-w-[75%] rounded-2xl p-4",
-                        message.sender === 'interviewee' 
-                          ? "bg-primary text-primary-foreground" 
-                          : "bg-secondary"
-                      )}
-                    >
-                      <p>{message.content}</p>
-                      <div className="mt-1 text-xs opacity-70 text-right">
-                        {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                
-                {isThinking && (
-                  <div className="flex justify-start">
-                    <div className="bg-secondary max-w-[75%] rounded-2xl p-4">
-                      <div className="flex space-x-2">
-                        <div className="w-2 h-2 rounded-full bg-foreground/30 animate-pulse"></div>
-                        <div className="w-2 h-2 rounded-full bg-foreground/30 animate-pulse" style={{ animationDelay: '0.2s' }}></div>
-                        <div className="w-2 h-2 rounded-full bg-foreground/30 animate-pulse" style={{ animationDelay: '0.4s' }}></div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                
-                <div ref={messagesEndRef} />
-                <ToastContainer position="bottom-right" />
+                    <option value="slow">Slow Speed</option>
+                    <option value="normal">Normal Speed</option>
+                    <option value="fast">Fast Speed</option>
+                  </select>
+                  <AnimatedButton 
+                    onClick={startSimulation}
+                    icon={<Play size={18} />}
+                    className="flex-1"
+                  >
+                    Start Interview Simulation
+                  </AnimatedButton>
+                </div>
               </div>
             </div>
           </GlassCard>
-        </div>
+        ) : (
+          <>
+            {/* Existing simulation controls and chat interface */}
+            <div className="max-w-4xl mx-auto">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h1 className="text-3xl font-bold mb-2">Interview Simulator</h1>
+                  <p className="text-muted-foreground">
+                    Test your interview flow with our AI interviewer
+                  </p>
+                </div>
+              </div>
+              
+              {/* Simulation Controls */}
+              <div className="mb-4 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  {isSimulating ? (
+                    <AnimatedButton
+                      onClick={handleStopSimulation}
+                      icon={<Pause size={18} />}
+                      variant="outline"
+                    >
+                      Pause Simulation
+                    </AnimatedButton>
+                  ) : (
+                    <AnimatedButton
+                      onClick={handleStartSimulation}
+                      icon={<Play size={18} />}
+                    >
+                      Start Simulation
+                    </AnimatedButton>
+                  )}
+                  <select
+                    value={simulationSpeed}
+                    onChange={(e) => setSimulationSpeed(e.target.value as any)}
+                    className="rounded-md border border-input bg-background px-3 py-2"
+                  >
+                    <option value="slow">Slow</option>
+                    <option value="normal">Normal</option>
+                    <option value="fast">Fast</option>
+                  </select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <AnimatedButton
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setMessages([])}
+                    icon={<RotateCw size={16} />}
+                  >
+                    Reset
+                  </AnimatedButton>
+                  <AnimatedButton
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCopyConversation}
+                    icon={<Copy size={16} />}
+                  >
+                    Copy Conversation
+                  </AnimatedButton>
+                  <AnimatedButton
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSaveTranscript}
+                    icon={<Save size={16} />}
+                  >
+                    Save Transcript
+                  </AnimatedButton>
+                </div>
+              </div>
+
+              {/* Chat Interface */}
+              <GlassCard className="mb-8 p-0 overflow-hidden">
+                {/* Interview Header */}
+                <div className="bg-secondary/50 backdrop-blur-sm p-4 border-b border-border">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      <span className="text-primary text-lg font-semibold">AI</span>
+                    </div>
+                    <div>
+                      <h3 className="font-medium">AI Interviewer</h3>
+                      <p className="text-xs text-muted-foreground">Product Research Session</p>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Messages */}
+                <div className="p-6 h-[500px] overflow-y-auto scrollbar-hidden">
+                  <div className="space-y-6">
+                    {messages.map((message) => (
+                      <div 
+                        key={message.id} 
+                        className={cn(
+                          "flex",
+                          message.sender === 'interviewee' ? "justify-end" : "justify-start"
+                        )}
+                      >
+                        <div 
+                          className={cn(
+                            "max-w-[75%] rounded-2xl p-4",
+                            message.sender === 'interviewee' 
+                              ? "bg-primary text-primary-foreground" 
+                              : "bg-secondary"
+                          )}
+                        >
+                          <p>{message.content}</p>
+                          <div className="mt-1 text-xs opacity-70 text-right">
+                            {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    
+                    {isThinking && (
+                      <div className="flex justify-start">
+                        <div className="bg-secondary max-w-[75%] rounded-2xl p-4">
+                          <div className="flex space-x-2">
+                            <div className="w-2 h-2 rounded-full bg-foreground/30 animate-pulse"></div>
+                            <div className="w-2 h-2 rounded-full bg-foreground/30 animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                            <div className="w-2 h-2 rounded-full bg-foreground/30 animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div ref={messagesEndRef} />
+                    <ToastContainer position="bottom-right" />
+                  </div>
+                </div>
+              </GlassCard>
+            </div>
+          </>
+        )}
       </div>
     </PageTransition>
   );

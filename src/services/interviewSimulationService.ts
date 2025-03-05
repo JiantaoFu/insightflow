@@ -37,7 +37,7 @@ class InterviewSimulationService {
   private ollamaService: OllamaService;
   private groqService: GroqService;
   private openAIService: OpenAIService;
-  private preferredModel: 'ollama' | 'groq' | 'openai' = 'openai';
+  private preferredModel: 'ollama' | 'groq' | 'openai' = 'groq';
 
   constructor() {
     this.ollamaService = new OllamaService();

@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -12,6 +11,8 @@ import Insights from "./pages/Insights";
 import NotFound from "./pages/NotFound";
 import Navbar from "./components/layout/Navbar";
 import Footer from "./components/layout/Footer";
+import InterviewLanding from '@/pages/InterviewLanding';
+import BatchInterviewSimulator from '@/pages/BatchInterviewSimulator';
 
 const queryClient = new QueryClient();
 
@@ -30,6 +31,8 @@ const App = () => (
               <Route path="/interview-builder" element={<InterviewBuilder />} />
               <Route path="/interview-simulator" element={<InterviewSimulator />} />
               <Route path="/insights" element={<Insights />} />
+              <Route path="/interview-modes" element={<InterviewLanding />} />
+              <Route path="/batch-interview" element={<BatchInterviewSimulator />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </div>

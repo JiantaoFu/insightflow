@@ -426,13 +426,38 @@ const InterviewBuilder = () => {
                   Save Draft
                 </AnimatedButton>
                 {questions.length > 0 && (
-                  <AnimatedButton 
-                    onClick={handlePreviewInterview}
-                    icon={<ArrowRight size={18} />}
-                    iconPosition="right"
-                  >
-                    Preview Interview
-                  </AnimatedButton>
+                  <Link to="/interview-modes" state={{ 
+                    interviewContext: {
+                      projectName: setupState.selected.name || setupState.idea,
+                      objectives: setupState.selected.objectives,
+                      targetAudience: setupState.selected.audiences.join(', '),
+                      questions: questions.map(q => ({
+                        question: q.question,
+                        purpose: q.description
+                      })),
+                      personas: {
+                        interviewer: {
+                          role: 'interviewer',
+                          background: "Product Research Expert specialized in " + setupState.idea,
+                          expertise: ["User Research", "Product Strategy", "Market Analysis"],
+                          personality: "Professional but friendly, asks insightful follow-up questions"
+                        },
+                        interviewee: {
+                          role: 'interviewee',
+                          background: `${setupState.selected.audiences[0]} interested in ${setupState.idea}`,
+                          expertise: setupState.selected.objectives.map(obj => obj.split(' ').slice(0, 3).join(' ')),
+                          personality: "Experienced professional with relevant domain knowledge"
+                        }
+                      }
+                    }
+                  }}>
+                    <AnimatedButton 
+                      icon={<ArrowRight size={18} />}
+                      iconPosition="right"
+                    >
+                      Choose Interview Mode
+                    </AnimatedButton>
+                  </Link>
                 )}
               </>
             ) : (
