@@ -5,14 +5,34 @@ import PageTransition from '@/components/ui/PageTransition';
 import GlassCard from '@/components/common/GlassCard';
 import AnimatedButton from '@/components/common/AnimatedButton';
 
+const mockInterviewContext = {
+  projectName: "Mock Project",
+  objectives: ["Understand user needs", "Identify pain points"],
+  targetAudience: "Product Managers, Developers",
+  questions: [
+    { question: "What problem were you trying to solve when you found our product?", purpose: "Understand the initial user pain point" },
+    { question: "How are you currently solving this problem?", purpose: "Learn about existing alternatives and workflows" },
+    { question: "What would make this product a must-have for you?", purpose: "Identify key features and value propositions" }
+  ],
+  personas: {
+    interviewer: {
+      role: 'interviewer',
+      background: "Product Research Expert",
+      expertise: ["User Research", "Product Strategy", "Market Analysis"],
+      personality: "Professional but friendly, asks insightful follow-up questions"
+    },
+    interviewee: {
+      role: 'interviewee',
+      background: "Product Manager",
+      expertise: ["User Experience", "Product Development"],
+      personality: "Experienced professional with relevant domain knowledge"
+    }
+  }
+};
+
 const InterviewLanding = () => {
   const location = useLocation();
-  const interviewContext = location.state?.interviewContext;
-
-  // Redirect if no context is provided
-  if (!interviewContext) {
-    return <Navigate to="/interview-builder" replace />;
-  }
+  const interviewContext = location.state?.interviewContext || mockInterviewContext;
 
   return (
     <PageTransition transition="fade">

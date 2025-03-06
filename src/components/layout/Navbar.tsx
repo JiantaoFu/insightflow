@@ -31,7 +31,7 @@ const Navbar = () => {
   const navLinks = [
     { name: 'Dashboard', path: '/dashboard' },
     { name: 'Interview Builder', path: '/interview-builder' },
-    { name: 'Interview Simulator', path: '/interview-simulator' },
+    { name: 'Interview Simulator', path: '/interview-modes' },
     { name: 'Insights', path: '/insights' },
   ];
 

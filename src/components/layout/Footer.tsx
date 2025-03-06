@@ -23,7 +23,7 @@ const Footer = () => {
                 </Link>
               </li>
               <li>
-                <Link to="/interview-simulator" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                <Link to="/interview-modes" className="text-sm text-muted-foreground hover:text-primary transition-colors">
                   Interview Simulator
                 </Link>
               </li>

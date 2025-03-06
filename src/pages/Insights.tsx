@@ -148,7 +148,7 @@ const Insights = () => {
     <PageTransition transition="fade" className="min-h-screen">
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center gap-2 mb-8">
-          <Link to="/interview-simulator">
+          <Link to="/interview-modes">
             <AnimatedButton variant="outline" size="sm" icon={<ArrowLeft size={16} />} iconPosition="left">
               Back to Interview
             </AnimatedButton>

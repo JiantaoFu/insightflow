@@ -1,5 +1,5 @@
-import { OllamaService } from './models/OllamaService';
 import { GroqService } from './models/GroqService';
+import { OllamaService } from './models/OllamaService';
 import { OpenAIService } from './models/OpenAIService';
 import { BaseModelService } from './models/BaseModelService';
 
@@ -34,19 +34,16 @@ interface InterviewResponse {
 }
 
 class InterviewSimulationService {
-  private ollamaService: OllamaService;
   private groqService: GroqService;
+  private ollamaService: OllamaService;
   private openAIService: OpenAIService;
-  private preferredModel: 'ollama' | 'groq' | 'openai' = 'groq';
+  private preferredModel: 'ollama' | 'groq' | 'openai';
 
   constructor() {
-    this.ollamaService = new OllamaService();
     this.groqService = new GroqService();
+    this.ollamaService = new OllamaService();
     this.openAIService = new OpenAIService();
-  }
-
-  setModel(model: 'ollama' | 'groq' | 'openai') {
-    this.preferredModel = model;
+    this.preferredModel = (import.meta.env.VITE_PREFERRED_MODEL as 'ollama' | 'groq' | 'openai') || 'groq';
   }
 
   private getService(): BaseModelService {
@@ -60,6 +57,10 @@ class InterviewSimulationService {
     }
   }
 
+  setModel(model: 'ollama' | 'groq' | 'openai') {
+    this.preferredModel = model;
+  }
+
   async conductInterview(
     context: InterviewContext,
     persona: InterviewPersona,
@@ -69,9 +70,8 @@ class InterviewSimulationService {
     
     try {
       const service = this.getService();
-      const response = await service.generateResponse(systemPrompt, chatMessages);
+      const response = await service.generateResponse(systemPrompt);
 
-          // Handle model errors first
       if (response.error) {
         throw new Error(`Model error: ${response.error}`);
       }
@@ -214,11 +214,26 @@ You are a participant in this research interview with this background: ${persona
   }
 
   async generateInsights(projectId: string, conversation: Message[]): Promise<string> {
-    const service = this.preferredModel === 'groq' ? this.groqService : this.ollamaService;
+    const service = this.getService();
     
     const prompt = `
-Analyze this product research interview and provide key insights:
+Analyze this product research interview conversation and generate structured insights in JSON format:
+
 ${conversation.map(m => `${m.role.toUpperCase()}: ${m.content}`).join('\n')}
+
+Generate a JSON response with this structure:
+{
+  "keyFindings": [
+    "Finding 1",
+    "Finding 2",
+    ...
+  ],
+  "recommendations": [
+    "Recommendation 1",
+    "Recommendation 2",
+    ...
+  ]
+}
 
 Focus on:
 1. Pain points identified
@@ -227,7 +242,7 @@ Focus on:
 4. Willingness to adopt new solutions
 5. Pricing sensitivity
 
-Format insights in clear, actionable bullet points.
+Keep findings and recommendations clear, specific, and actionable.
 `;
     
     const response = await service.generateResponse(prompt);
@@ -235,4 +250,4 @@ Format insights in clear, actionable bullet points.
   }
 }
 
-export { InterviewSimulationService };
+export default new InterviewSimulationService();

@@ -246,7 +246,7 @@ const InterviewBuilder = () => {
       }
     };
 
-    navigate('/interview-simulator', { state: { interviewContext } });
+    navigate('/interview-modes', { state: { interviewContext } });
   };
 
   return (

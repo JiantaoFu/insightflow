@@ -1,4 +1,7 @@
-import axios from 'axios';
+import { GroqService } from './models/GroqService';
+import { OllamaService } from './models/OllamaService';
+import { OpenAIService } from './models/OpenAIService';
+import { BaseModelService } from './models/BaseModelService';
 
 interface ProjectIdea {
   idea: string;
@@ -11,42 +14,63 @@ interface AnalysisResult {
 }
 
 class ProjectAnalysisService {
-  private ollamaApiUrl = 'http://localhost:11434/api/generate';
-  private maxRetries = 3;
-  private retryDelay = 1000;
+  private groqService: GroqService;
+  private ollamaService: OllamaService;
+  private openAIService: OpenAIService;
+  private preferredModel: 'ollama' | 'groq' | 'openai';
+
+  constructor() {
+    this.groqService = new GroqService();
+    this.ollamaService = new OllamaService();
+    this.openAIService = new OpenAIService();
+    this.preferredModel = (import.meta.env.VITE_PREFERRED_MODEL as 'ollama' | 'groq' | 'openai') || 'groq';
+  }
+
+  private getService(): BaseModelService {
+    switch (this.preferredModel) {
+      case 'groq':
+        return this.groqService;
+      case 'openai':
+        return this.openAIService;
+      default:
+        return this.ollamaService;
+    }
+  }
+
+  setModel(model: 'ollama' | 'groq' | 'openai') {
+    this.preferredModel = model;
+  }
 
   async analyzeProject(project: ProjectIdea): Promise<AnalysisResult> {
+    const prompt = this.constructPrompt(project);
     let lastError: Error | null = null;
     
-    for (let attempt = 0; attempt < this.maxRetries; attempt++) {
+    for (let attempt = 0; attempt < 3; attempt++) {
       try {
-        const response = await axios.post(this.ollamaApiUrl, {
-          model: 'deepseek-r1:latest',
-          prompt: this.constructPrompt(project),
-          stream: false,
-          options: {
-            temperature: 0.7,
-            max_tokens: 500
-          }
-        });
+        const service = this.getService();
+        const response = await service.generateResponse(prompt);
 
-        const result = this.extractJsonFromResponse(response.data.response);
+        if (response.error) {
+          throw new Error(`Model error: ${response.error}`);
+        }
+
+        const result = this.extractJsonFromResponse(response.content);
         if (result && this.isValidAnalysis(result)) {
           return result;
         }
 
         console.log(`Attempt ${attempt + 1}: Invalid response format, retrying...`);
-        await this.delay(this.retryDelay);
+        await this.delay(1000);
         continue;
 
       } catch (error) {
         lastError = error as Error;
         console.log(`Attempt ${attempt + 1} failed:`, error);
-        await this.delay(this.retryDelay);
+        await this.delay(1000);
       }
     }
 
-    throw new Error(`Failed to analyze project after ${this.maxRetries} attempts. ${lastError?.message}`);
+    throw new Error(`Failed to analyze project after 3 attempts. ${lastError?.message}`);
   }
 
   private constructPrompt(project: ProjectIdea): string {

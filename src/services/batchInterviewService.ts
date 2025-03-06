@@ -1,5 +1,7 @@
 import { GroqService } from './models/GroqService';
 import { OllamaService } from './models/OllamaService';
+import { OpenAIService } from './models/OpenAIService';
+import { BaseModelService } from './models/BaseModelService';
 
 interface InterviewContext {
   projectName: string;
@@ -26,9 +28,30 @@ interface BatchInterviewResult {
 
 class BatchInterviewService {
   private groqService: GroqService;
+  private ollamaService: OllamaService;
+  private openAIService: OpenAIService;
+  private preferredModel: 'ollama' | 'groq' | 'openai';
 
   constructor() {
     this.groqService = new GroqService();
+    this.ollamaService = new OllamaService();
+    this.openAIService = new OpenAIService();
+    this.preferredModel = (import.meta.env.VITE_PREFERRED_MODEL as 'ollama' | 'groq' | 'openai') || 'groq';
+  }
+
+  private getService(): BaseModelService {
+    switch (this.preferredModel) {
+      case 'groq':
+        return this.groqService;
+      case 'openai':
+        return this.openAIService;
+      default:
+        return this.ollamaService;
+    }
+  }
+
+  setModel(model: 'ollama' | 'groq' | 'openai') {
+    this.preferredModel = model;
   }
 
   async generateInterview(context: InterviewContext): Promise<BatchInterviewResult> {
@@ -62,7 +85,8 @@ OUTPUT FORMAT:
 }`;
 
     try {
-      const response = await this.groqService.generateResponse(systemPrompt);
+      const service = this.getService();
+      const response = await service.generateResponse(systemPrompt);
       return this.parseResponse(response.content);
     } catch (error) {
       console.error('Failed to generate interview:', error);

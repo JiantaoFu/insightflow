@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, Save, ArrowLeft, FastForward, RotateCw, Copy } from 'lucide-react';
+import { Play, Pause, Save, ArrowLeft, FastForward, RotateCw, Copy, Info } from 'lucide-react';
 import PageTransition from '@/components/ui/PageTransition';
 import GlassCard from '@/components/common/GlassCard';
 import AnimatedButton from '@/components/common/AnimatedButton';
 import { Input } from '@/components/ui/input';
-import { Link, useLocation, Navigate } from 'react-router-dom';
+import { Link, useLocation, Navigate, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { InterviewSimulationService } from '@/services/interviewSimulationService';
+import InterviewSimulationService from '@/services/interviewSimulationService';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -19,6 +19,7 @@ interface SimMessage {
 
 const InterviewSimulator = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const interviewContext = location.state?.interviewContext;
 
   // Redirect if no context is provided
@@ -33,8 +34,17 @@ const InterviewSimulator = () => {
   const [isThinking, setIsThinking] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isSimulating, setIsSimulating] = useState(false);
-  const [simulationSpeed, setSimulationSpeed] = useState<'slow' | 'normal' | 'fast'>('normal');
+  const [simulationSpeed, setSimulationSpeed] = useState<'slow' | 'normal' | 'fast'>('slow');
   const [interviewState, setInterviewState] = useState<'ongoing' | 'asking_final_thoughts' | 'waiting_for_final_response' | 'completed'>('ongoing');
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const [hasStarted, setHasStarted] = useState(false);
+  const [insights, setInsights] = useState<{ 
+    keyFindings: string[]; 
+    recommendations: string[]; 
+  }>({ 
+    keyFindings: [], 
+    recommendations: [] 
+  });
   
   // Create default personas if not provided in context
   const [interviewer] = useState(() => 
@@ -55,13 +65,8 @@ const InterviewSimulator = () => {
     }
   );
 
-  const [interviewService] = useState(() => new InterviewSimulationService());
+  const [interviewService] = useState(() => InterviewSimulationService);
 
-  // Auto-scroll to bottom of messages
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-  
   const handleSendMessage = async () => {
     if (!newMessage.trim()) return;
     
@@ -83,7 +88,7 @@ const InterviewSimulator = () => {
       
       const aiMessage = {
         role: 'interviewer' as const,
-        content: response
+        content: response.content
       };
       
       setMessages(prev => [...prev, aiMessage]);
@@ -137,9 +142,11 @@ const InterviewSimulator = () => {
     });
   };
 
-  // Add effect to monitor message changes
+  // Scroll to the bottom of the messages container
   useEffect(() => {
-    console.log('Messages updated:', messages.length);
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
   }, [messages]);
 
   // Move simulation logic to useEffect
@@ -269,144 +276,258 @@ const InterviewSimulator = () => {
     }
   };
 
+  // Add this function to generate insights when conversation ends
+  const generateInsights = async () => {
+    try {
+      const result = await interviewService.generateInsights(
+        'project-id',
+        messages.map(m => ({
+          role: m.sender,
+          content: m.content
+        }))
+      );
+
+      // Parse the insights from the result
+      const parsedInsights = JSON.parse(result);
+      setInsights(parsedInsights);
+    } catch (error) {
+      console.error('Failed to generate insights:', error);
+      toast.error('Failed to generate insights');
+    }
+  };
+
+  // Update the simulation effect to generate insights when completed
+  useEffect(() => {
+    if (interviewState === 'completed' && messages.length > 0) {
+      generateInsights();
+    }
+  }, [interviewState, messages]);
+
+  const handleStartInterview = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setHasStarted(true);
+  };
+
   return (
     <PageTransition transition="fade" className="min-h-screen">
       <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center gap-2 mb-8">
-          <Link to="/interview-builder">
-            <AnimatedButton variant="outline" size="sm" icon={<ArrowLeft size={16} />} iconPosition="left">
-              Back to Builder
-            </AnimatedButton>
-          </Link>
+        <div className="flex justify-between mb-6">
+          <AnimatedButton 
+            icon={<ArrowLeft />}
+            onClick={() => navigate(-1)}
+          >
+            Back
+          </AnimatedButton>
         </div>
-        
-        <div className="max-w-4xl mx-auto">
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <h1 className="text-3xl font-bold mb-2">Interview Simulator</h1>
-              <p className="text-muted-foreground">
-                Test your interview flow with our AI interviewer
-              </p>
-            </div>
-          </div>
-          
-          {/* Simulation Controls */}
-          <div className="mb-4 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              {isSimulating ? (
-                <AnimatedButton
-                  onClick={handleStopSimulation}
-                  icon={<Pause size={18} />}
-                  variant="outline"
-                >
-                  Pause Simulation
-                </AnimatedButton>
-              ) : (
-                <AnimatedButton
-                  onClick={handleStartSimulation}
-                  icon={<Play size={18} />}
-                >
-                  Start Simulation
-                </AnimatedButton>
-              )}
-              <select
-                value={simulationSpeed}
-                onChange={(e) => setSimulationSpeed(e.target.value as any)}
-                className="rounded-md border border-input bg-background px-3 py-2"
-              >
-                <option value="slow">Slow</option>
-                <option value="normal">Normal</option>
-                <option value="fast">Fast</option>
-              </select>
-            </div>
-            <div className="flex items-center gap-2">
-              <AnimatedButton
-                variant="outline"
-                size="sm"
-                onClick={() => setMessages([])}
-                icon={<RotateCw size={16} />}
-              >
-                Reset
-              </AnimatedButton>
-              <AnimatedButton
-                variant="outline"
-                size="sm"
-                onClick={handleCopyConversation}
-                icon={<Copy size={16} />}
-              >
-                Copy Conversation
-              </AnimatedButton>
-              <AnimatedButton
-                variant="outline"
-                size="sm"
-                onClick={handleSaveTranscript}
-                icon={<Save size={16} />}
-              >
-                Save Transcript
-              </AnimatedButton>
-            </div>
-          </div>
 
-          {/* Chat Interface */}
-          <GlassCard className="mb-8 p-0 overflow-hidden">
-            {/* Interview Header */}
-            <div className="bg-secondary/50 backdrop-blur-sm p-4 border-b border-border">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <span className="text-primary text-lg font-semibold">AI</span>
+        {!hasStarted ? (
+          <GlassCard className="mb-6 p-6">
+            <div className="flex items-start gap-4">
+              <Info className="w-6 h-6 text-primary mt-1" />
+              <div>
+                <h2 className="text-xl font-semibold mb-4">About Interactive Interview Simulation</h2>
+                <div className="space-y-4 text-muted-foreground">
+                  <p>This mode will conduct a real-time interview simulation based on your project context:</p>
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-foreground font-medium mb-2">Project Details</h3>
+                      <ul className="list-disc pl-4 space-y-2">
+                        <li>Project: <span className="text-foreground">{interviewContext.projectName}</span></li>
+                        <li>Audience: <span className="text-foreground">{interviewContext.targetAudience}</span></li>
+                      </ul>
+                    </div>
+                    
+                    <div>
+                      <h3 className="text-foreground font-medium mb-2">Questions to Cover</h3>
+                      <ul className="list-decimal pl-4 space-y-2">
+                        {interviewContext.questions.map((q, i) => (
+                          <li key={i} className="text-foreground">
+                            {q.question}
+                            <p className="text-sm text-muted-foreground ml-0 mt-1">Purpose: {q.purpose}</p>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                  <p>The AI will:</p>
+                  <ul className="list-disc pl-4 space-y-2">
+                    <li>Conduct a natural, interactive conversation</li>
+                    <li>Cover your prepared questions adaptively</li>
+                    <li>Add relevant follow-up questions based on responses</li>
+                    <li>Provide immediate feedback and insights</li>
+                  </ul>
                 </div>
-                <div>
-                  <h3 className="font-medium">AI Interviewer</h3>
-                  <p className="text-xs text-muted-foreground">Product Research Session</p>
-                </div>
-              </div>
-            </div>
-            
-            {/* Messages */}
-            <div className="p-6 h-[500px] overflow-y-auto scrollbar-hidden">
-              <div className="space-y-6">
-                {messages.map((message) => (
-                  <div 
-                    key={message.id} 
-                    className={cn(
-                      "flex",
-                      message.sender === 'interviewee' ? "justify-end" : "justify-start"
-                    )}
+                <div className="mt-6">
+                  <AnimatedButton 
+                    icon={<Play />}
+                    onClick={handleStartInterview}
+                    className="w-full bg-primary hover:bg-primary/90"
                   >
-                    <div 
-                      className={cn(
-                        "max-w-[75%] rounded-2xl p-4",
-                        message.sender === 'interviewee' 
-                          ? "bg-primary text-primary-foreground" 
-                          : "bg-secondary"
-                      )}
-                    >
-                      <p>{message.content}</p>
-                      <div className="mt-1 text-xs opacity-70 text-right">
-                        {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                
-                {isThinking && (
-                  <div className="flex justify-start">
-                    <div className="bg-secondary max-w-[75%] rounded-2xl p-4">
-                      <div className="flex space-x-2">
-                        <div className="w-2 h-2 rounded-full bg-foreground/30 animate-pulse"></div>
-                        <div className="w-2 h-2 rounded-full bg-foreground/30 animate-pulse" style={{ animationDelay: '0.2s' }}></div>
-                        <div className="w-2 h-2 rounded-full bg-foreground/30 animate-pulse" style={{ animationDelay: '0.4s' }}></div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                
-                <div ref={messagesEndRef} />
-                <ToastContainer position="bottom-right" />
+                    Start Interactive Interview
+                  </AnimatedButton>
+                </div>
               </div>
             </div>
           </GlassCard>
-        </div>
+        ) : (
+          <>
+            <div className="max-w-4xl mx-auto">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h1 className="text-3xl font-bold mb-2">Interview Simulator</h1>
+                  <p className="text-muted-foreground">
+                    Test your interview flow with our AI interviewer
+                  </p>
+                </div>
+              </div>
+              
+              {/* Simulation Controls */}
+              <div className="mb-4 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  {isSimulating ? (
+                    <AnimatedButton
+                      onClick={handleStopSimulation}
+                      icon={<Pause size={18} />}
+                      variant="outline"
+                    >
+                      Pause Simulation
+                    </AnimatedButton>
+                  ) : (
+                    <AnimatedButton
+                      onClick={handleStartSimulation}
+                      icon={<Play size={18} />}
+                    >
+                      Start Simulation
+                    </AnimatedButton>
+                  )}
+                  <select
+                    value={simulationSpeed}
+                    onChange={(e) => setSimulationSpeed(e.target.value as any)}
+                    className="rounded-md border border-input bg-background px-3 py-2"
+                  >
+                    <option value="slow">Slow</option>
+                    <option value="normal">Normal</option>
+                    <option value="fast">Fast</option>
+                  </select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <AnimatedButton
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setMessages([])}
+                    icon={<RotateCw size={16} />}
+                  >
+                    Reset
+                  </AnimatedButton>
+                  <AnimatedButton
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCopyConversation}
+                    icon={<Copy size={16} />}
+                  >
+                    Copy Conversation
+                  </AnimatedButton>
+                  <AnimatedButton
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSaveTranscript}
+                    icon={<Save size={16} />}
+                  >
+                    Save Transcript
+                  </AnimatedButton>
+                </div>
+              </div>
+
+              {/* Chat Interface */}
+              <GlassCard className="mb-8 p-0 overflow-hidden">
+                {/* Interview Header */}
+                <div className="bg-secondary/50 backdrop-blur-sm p-4 border-b border-border">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      <span className="text-primary text-lg font-semibold">AI</span>
+                    </div>
+                    <div>
+                      <h3 className="font-medium">AI Interviewer</h3>
+                      <p className="text-xs text-muted-foreground">Product Research Session</p>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Messages */}
+                <div 
+                  ref={messagesContainerRef} 
+                  className="p-6 h-[500px] overflow-y-auto scrollbar-hidden"
+                >
+                  <div className="space-y-6">
+                    {messages.map((message) => (
+                      <div 
+                        key={message.id} 
+                        className={cn(
+                          "flex",
+                          message.sender === 'interviewee' ? "justify-end" : "justify-start"
+                        )}
+                      >
+                        <div 
+                          className={cn(
+                            "max-w-[75%] rounded-2xl p-4",
+                            message.sender === 'interviewee' 
+                              ? "bg-primary text-primary-foreground" 
+                              : "bg-secondary"
+                          )}
+                        >
+                          <p>{message.content}</p>
+                          <div className="mt-1 text-xs opacity-70 text-right">
+                            {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    
+                    {isThinking && (
+                      <div className="flex justify-start">
+                        <div className="bg-secondary max-w-[75%] rounded-2xl p-4">
+                          <div className="flex space-x-2">
+                            <div className="w-2 h-2 rounded-full bg-foreground/30 animate-pulse"></div>
+                            <div className="w-2 h-2 rounded-full bg-foreground/30 animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                            <div className="w-2 h-2 rounded-full bg-foreground/30 animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div ref={messagesEndRef} />
+                    <ToastContainer position="bottom-right" />
+                  </div>
+                </div>
+              </GlassCard>
+
+              {/* Add Insights Display */}
+              {insights.keyFindings.length > 0 && (
+                <GlassCard className="mt-8 p-6">
+                  <h3 className="text-lg font-semibold mb-4">Interview Insights</h3>
+                  <div className="grid gap-4">
+                    <div>
+                      <h4 className="font-medium mb-2">Key Findings</h4>
+                      <ul className="list-disc pl-4">
+                        {insights.keyFindings.map((finding, i) => (
+                          <li key={i}>{finding}</li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div>
+                      <h4 className="font-medium mb-2">Recommendations</h4>
+                      <ul className="list-disc pl-4">
+                        {insights.recommendations.map((rec, i) => (
+                          <li key={i}>{rec}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </GlassCard>
+              )}
+            </div>
+          </>
+        )}
       </div>
     </PageTransition>
   );
