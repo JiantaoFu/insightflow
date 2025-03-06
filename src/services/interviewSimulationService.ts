@@ -70,7 +70,7 @@ class InterviewSimulationService {
     
     try {
       const service = this.getService();
-      const response = await service.generateResponse(systemPrompt);
+      const response = await service.generateResponse(systemPrompt, chatMessages);
 
       if (response.error) {
         throw new Error(`Model error: ${response.error}`);
@@ -165,6 +165,7 @@ INTERVIEWER GUIDELINES:
 
     Conduct a natural, conversational interview, asking one focused question at a time.
     Follow up on unclear or interesting answers but limit each topic to one follow-up before moving forward.
+    One question at a time—avoid multi-part questions or complex phrasing.
     Ensure smooth transitions between topics and avoid revisiting previous questions unless explicitly requested.
     Maintain a linear structure, following the predefined question list exactly.
     Keep the conversation purposeful—no excessive affirmations, small talk, or unnecessary prolonging.

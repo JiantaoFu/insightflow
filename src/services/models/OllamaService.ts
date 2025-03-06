@@ -12,7 +12,7 @@ export class OllamaService extends BaseModelService {
         ...messages
       ];
 
-      console.log(JSON.stringify(formattedMessages, null, 2));
+      console.log('OllamaService - Formatted messages:', JSON.stringify(formattedMessages, null, 2));
 
       const response = await axios.post(this.apiUrl, {
         model: 'deepseek-r1:latest',
@@ -26,6 +26,7 @@ export class OllamaService extends BaseModelService {
         }
       });
 
+      console.log('OllamaService - Response:', response.data.choices[0].message.content);
       return {
         content: response.data.choices[0].message.content
       };
