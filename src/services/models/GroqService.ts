@@ -1,4 +1,4 @@
-import { BaseModelService, ModelResponse } from './BaseModelService';
+import { BaseModelService, ModelResponse, ModelMessage } from './BaseModelService';
 import axios from 'axios';
 
 export class GroqService extends BaseModelService {
@@ -13,27 +13,16 @@ export class GroqService extends BaseModelService {
     }
   }
 
-  async generateResponse(systemPrompt: string, userPrompt?: string): Promise<ModelResponse> {
+  async generateResponse(systemPrompt: string, messages: ModelMessage[] = []): Promise<ModelResponse> {
     try {
-      const messages = [
-        {
-          role: "system",
-          content: systemPrompt
-        }
-      ];
-
-      if (userPrompt) {
-        messages.push({
-          role: "user",
-          content: userPrompt
-        });
-      }
-
       const response = await axios.post(
         this.apiUrl,
         {
-          model: "llama-3.3-70b-versatile",
-          messages,
+          model: "mixtral-8x7b-32768",
+          messages: [
+            { role: 'system', content: systemPrompt },
+            ...messages
+          ],
           temperature: 0.7,
           max_tokens: 32768,
         },

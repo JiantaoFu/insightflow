@@ -39,7 +39,7 @@ Name: ${context.projectName}
 Goals: ${context.objectives.join(', ')}
 Target Audience: ${context.targetAudience}
 
-Key Questions to Cover:
+QUESTIONS TO COVER:
 ${context.questions.map(q => `- ${q.question}`).join('\n')}
 
 REQUIREMENTS:
@@ -48,7 +48,6 @@ REQUIREMENTS:
 3. Include relevant follow-up questions
 4. Keep responses concise and realistic
 5. End with a proper wrap-up
-6. Provide key insights from the conversation
 
 OUTPUT FORMAT:
 {
@@ -79,12 +78,14 @@ OUTPUT FORMAT:
       
       const result = JSON.parse(jsonMatch[0]);
       
-      // Validate structure
-      if (!Array.isArray(result.messages) || !result.insights) {
-        throw new Error('Invalid response structure');
-      }
-
-      return result;
+      // Map the roles to our internal format
+      return {
+        messages: result.messages.map((m: any) => ({
+          role: m.role,
+          content: m.content
+        })),
+        insights: result.insights
+      };
     } catch (error) {
       console.error('Failed to parse interview response:', error);
       throw new Error('Failed to parse interview response');

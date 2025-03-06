@@ -65,11 +65,11 @@ class InterviewSimulationService {
     persona: InterviewPersona,
     messages: Message[]
   ): Promise<InterviewResponse> {
-    const { systemPrompt, userPrompt } = this.constructPrompts(context, persona, messages);
+    const { systemPrompt, messages: chatMessages } = this.constructPrompts(context, persona, messages);
     
     try {
       const service = this.getService();
-      const response = await service.generateResponse(systemPrompt, userPrompt);
+      const response = await service.generateResponse(systemPrompt, chatMessages);
 
           // Handle model errors first
       if (response.error) {
@@ -81,7 +81,7 @@ class InterviewSimulationService {
         throw new Error('Empty response received from language model');
       }
 
-      console.log('Interview response:', response.content);
+      // console.log('Interview response:', response.content);
       
       // Extract the AI's assessment of the current state and the actual content
       const { state, content } = this.extractStateAndContent(response.content);
@@ -133,25 +133,22 @@ class InterviewSimulationService {
     context: InterviewContext,
     persona: InterviewPersona,
     messages: Message[]
-  ): { systemPrompt: string; userPrompt: string } {
-    // Base system prompt that varies by role
-    let systemPrompt = `You are participating in a product research interview about ${context.projectName}.`;
-    
-    if (persona.role === 'interviewer') {
-      systemPrompt += this.constructInterviewerPrompt(context);
-    } else {
-      systemPrompt += this.constructParticipantPrompt(persona, context);
-    }
+  ): { systemPrompt: string; messages: ModelMessage[] } {
+    const systemPrompt = `You are participating in a product research interview about ${context.projectName}.` +
+      (persona.role === 'interviewer' ? 
+        this.constructInterviewerPrompt(context) : 
+        this.constructParticipantPrompt(persona, context));
 
-    // Construct the user prompt with conversation history
-    let userPrompt = `CURRENT CONVERSATION:\n`;
-    userPrompt += `${messages.slice(-5).map(m => `${m.role.toUpperCase()}: ${m.content}`).join('\n')}\n\n`;
-    userPrompt += `Respond naturally as ${persona.role}.`;
+    // Convert each message to role/content pair
+    const formattedMessages: ModelMessage[] = messages.map(m => ({
+      role: m.role === persona.role ? 'assistant' : 'user',
+      content: m.content
+    }));
 
-    console.log('System prompt:', systemPrompt);
-    console.log('User prompt:', userPrompt);
-
-    return { systemPrompt, userPrompt };
+    return { 
+      systemPrompt, 
+      messages: formattedMessages 
+    };
   }
 
   private constructInterviewerPrompt(context: InterviewContext): string {
@@ -164,52 +161,33 @@ ${context.objectives.map(obj => `- ${obj}`).join('\n')}
 TARGET AUDIENCE:
 ${context.targetAudience}
 
-INTERVIEW STRUCTURE:
-1. OPENING: Introduce yourself, explain the purpose of the interview, and make the participant comfortable.
-2. MAIN QUESTIONS: Cover these key topics in a natural conversation flow:
-${context.questions.map((q, i) => `   ${i+1}. ${q.question} (Purpose: ${q.purpose})`).join('\n')}
-3. CLOSING: When you've covered all key topics, ask for final thoughts and thank the participant.
-
 INTERVIEWER GUIDELINES:
-- Ask questions naturally and conversationally
-- Respond only once per prompt as the **interviewer**, keeping the conversation flowing naturally. DO NOT include any responses from the **interviewee**.
-- Follow up on unclear or interesting answers
-- Keep the interview focused on the research objectives
-- Feel free to show emotions and personality as the **interviewer**.
-- Never introduce yourself with "Hi! I'm [name]" or similar generic greetings
-- Don't use any special formatting, asterisks, or timestamps. Just write your response as a flowing conversation. Never use dashes, colons, or bullet points to structure the dialogue.
-- Respond directly as the interviewer in the conversation. Maintain the interview’s natural flow, asking questions and responding based on the provided objectives. 
-- Only focus on progressing the conversation and avoid including analysis of the structure.
-- Ask **one question at a time**. Ensure that only one aspect of the topic is being addressed in each prompt. 
-   For example: 
-     - Instead of asking "What features would you want in a productivity tool and how much would you pay?", ask about features first, and only once that’s discussed, ask about pricing.
-     - Ensure that each question flows naturally from the participant's previous answer.
-- **Avoid asking multiple questions in one round**. Only ask one question, and once the participant answers, you can ask a follow-up question on the same topic or move to the next related topic.
-- **Follow up naturally** based on the participant's answers. If they say something interesting or unclear, follow up, but keep it relevant to the current topic.
-- When transitioning between topics (e.g., from features to pricing), make sure the conversation feels natural and smooth.
-- **Do not use "[[STATE:COMPLETED]]" until** the participant has provided their final thoughts and the conversation has come to a complete close.
-- **Be brief** when transitioning between topics, and avoid repeating information.
-- **Limit the conversation to a 10 rounds**, based on the structure and complexity of the interview. Aim to cover all key topics without dragging on unnecessarily.
-- **Once the majority of key objectives have been covered**, transition to wrapping up. The transition to wrap-up should feel natural once the most important aspects of the interview have been explored.
-- **Follow the predefined question list exactly.** 
-- **Each topic receives a maximum of ONE follow-up question.** If a clear answer is given, move forward without any further follow-ups.
-- **Do NOT revisit previous topics unless explicitly requested.** Maintain a linear interview structure.
-- **If a similar question has already been answered, acknowledge and transition to the next topic.**
-- **If no new insights are gained from a follow-up, move forward immediately.**
-- **ENFORCE an exit condition:** After 7 exchanges, transition to closing.
-- **Move forward purposefully:** No excessive affirmations or unnecessary small talk.
-- **Do NOT start responses with "INTERVIEWER:" or any role label.** Just say what needs to be said.
 
-INTERVIEW STATE MANAGEMENT:
-- You are responsible for determining when to move to the next phase of the interview
-- When you've covered most questions and are ready to wrap up, include "[[STATE:WRAPPING_UP]]" at the beginning of your response
-- When the interview is complete after final thoughts, include "[[STATE:COMPLETED]]" at the beginning of your response
-- **Do not include both "[[STATE:WRAPPING_UP]]" and "[[STATE:COMPLETED]]" in the same response. Only one state marker should appear, based on the flow of the interview**.
-- Ensure the conversation feels like an authentic interview, **only simulating the interviewer role**.
+    Conduct a natural, conversational interview, asking one focused question at a time.
+    Follow up on unclear or interesting answers but limit each topic to one follow-up before moving forward.
+    Ensure smooth transitions between topics and avoid revisiting previous questions unless explicitly requested.
+    Maintain a linear structure, following the predefined question list exactly.
+    Keep the conversation purposeful—no excessive affirmations, small talk, or unnecessary prolonging.
+    Limit the interview to 10 rounds, wrapping up naturally once key objectives are covered.
 
-IMPORTANT: 
-- Avoid including any internal guidelines or instructions in the output (e.g., “Follow up on unclear or interesting answers”). Just conduct the interview in a natural, engaging way, based on the structure and objectives provided. 
-- Once the 10-round limit is reached, transition to the wrap-up phase and conclude the interview.
+STYLE & FORMAT:
+
+    Speak directly as the interviewer; do not introduce yourself or use special formatting, timestamps, dashes, colons, or bullet points.
+    Do not label responses with "INTERVIEWER:"—just engage naturally.
+    Be brief when transitioning topics, avoiding repetition.
+
+STATE MANAGEMENT:
+
+    Progress the interview naturally, signaling key phases:
+        Use [[STATE:WRAPPING_UP]] when transitioning to closing.
+        Use [[STATE:COMPLETED]] only after final thoughts.
+        Never include both in the same response.
+
+IMPORTANT:
+
+    Never include internal instructions in the output—just conduct the interview as intended.
+    Enforce an exit condition: After 7 exchanges, begin transitioning to wrap-up.
+    Move forward efficiently—avoid redundant questions or unnecessary delays.
 `;
   }
 

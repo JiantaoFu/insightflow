@@ -1,26 +1,33 @@
-import { BaseModelService, ModelResponse } from './BaseModelService';
+import { BaseModelService, ModelResponse, ModelMessage } from './BaseModelService';
 import axios from 'axios';
 
 export class OllamaService extends BaseModelService {
-  private apiUrl = 'http://localhost:11434/api/generate';
+  private apiUrl = 'http://localhost:11434/v1/chat/completions';
 
-  async generateResponse(systemPrompt: string, userPrompt?: string): Promise<ModelResponse> {
+  async generateResponse(systemPrompt: string, messages: ModelMessage[] = []): Promise<ModelResponse> {
     try {
-      // Combine prompts for Ollama since it doesn't support system messages directly
-      const combinedPrompt = `System: ${systemPrompt}\n\n${userPrompt || ''}`;
-      
+      // Format messages as a JSON array
+      const formattedMessages = [
+        { role: 'system', content: systemPrompt },
+        ...messages
+      ];
+
+      console.log(JSON.stringify(formattedMessages, null, 2));
+
       const response = await axios.post(this.apiUrl, {
         model: 'deepseek-r1:latest',
-        prompt: combinedPrompt,
-        stream: false,
-        options: {
-          temperature: 0.7,
-          max_tokens: 4096  // Increased from 1000 to 4096
+        messages: formattedMessages,
+        temperature: 0.7,
+        max_tokens: 4096
+      }, {
+        headers: {
+          'Authorization': `Bearer OLLAMA_API_KEY`,
+          'Content-Type': 'application/json',
         }
       });
 
       return {
-        content: response.data.response
+        content: response.data.choices[0].message.content
       };
     } catch (error) {
       console.error('Ollama API error:', error);

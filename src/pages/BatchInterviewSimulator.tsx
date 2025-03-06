@@ -70,11 +70,27 @@ const BatchInterviewSimulator = () => {
                 <h2 className="text-xl font-semibold mb-4">About Batch Interview Generation</h2>
                 <div className="space-y-4 text-muted-foreground">
                   <p>This mode will generate a complete simulated interview based on your project context:</p>
-                  <ul className="list-disc pl-4 space-y-2">
-                    <li>Project: <span className="text-foreground">{interviewContext.projectName}</span></li>
-                    <li>Audience: <span className="text-foreground">{interviewContext.targetAudience}</span></li>
-                    <li>Questions: <span className="text-foreground">{interviewContext.questions.length} prepared</span></li>
-                  </ul>
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-foreground font-medium mb-2">Project Details</h3>
+                      <ul className="list-disc pl-4 space-y-2">
+                        <li>Project: <span className="text-foreground">{interviewContext.projectName}</span></li>
+                        <li>Audience: <span className="text-foreground">{interviewContext.targetAudience}</span></li>
+                      </ul>
+                    </div>
+                    
+                    <div>
+                      <h3 className="text-foreground font-medium mb-2">Questions to Cover</h3>
+                      <ul className="list-decimal pl-4 space-y-2">
+                        {interviewContext.questions.map((q, i) => (
+                          <li key={i} className="text-foreground">
+                            {q.question}
+                            <p className="text-sm text-muted-foreground ml-0 mt-1">Purpose: {q.purpose}</p>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
                   <p>The AI will:</p>
                   <ul className="list-disc pl-4 space-y-2">
                     <li>Generate a natural conversation flow</li>
