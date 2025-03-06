@@ -305,7 +305,9 @@ const InterviewSimulator = () => {
 
   const handleStartInterview = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    setHasStarted(true);
+    setTimeout(() => {
+      setHasStarted(true);
+    }, 300); // Small delay to ensure scroll completes first
   };
 
   return (
