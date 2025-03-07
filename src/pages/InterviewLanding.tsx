@@ -1,6 +1,6 @@
 import React from 'react';
-import { Link, useLocation, Navigate } from 'react-router-dom';
-import { ArrowRight, Sparkles, MessageCircle } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { ArrowRight, Sparkles, MessageCircle, ArrowLeft } from 'lucide-react';
 import PageTransition from '@/components/ui/PageTransition';
 import GlassCard from '@/components/common/GlassCard';
 import AnimatedButton from '@/components/common/AnimatedButton';
@@ -32,11 +32,37 @@ const mockInterviewContext = {
 
 const InterviewLanding = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const interviewContext = location.state?.interviewContext || mockInterviewContext;
+
+  const handleBack = () => {
+    navigate('/interview-builder', {
+      state: { 
+        preservedContext: {
+          ...interviewContext,
+          projectName: interviewContext.projectName,
+          targetAudience: interviewContext.targetAudience,
+          objectives: interviewContext.objectives,
+          suggestions: interviewContext.suggestions || {},
+          setupState: interviewContext.setupState,
+          generatedQuestions: interviewContext.generatedQuestions || [] // Preserve generated questions
+        }
+      }
+    });
+  };
 
   return (
     <PageTransition transition="fade">
       <div className="container mx-auto p-8">
+        <div className="flex justify-between mb-8">
+          <AnimatedButton 
+            icon={<ArrowLeft />}
+            onClick={handleBack}
+          >
+            Back
+          </AnimatedButton>
+        </div>
+        
         <h1 className="text-3xl font-bold mb-8">Choose Interview Mode</h1>
         
         <div className="grid md:grid-cols-2 gap-6">

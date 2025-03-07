@@ -7,7 +7,7 @@ import QuestionCard from '@/components/interview/QuestionCard';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import questionGenerationService from '@/services/questionGenerationService';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -15,50 +15,76 @@ import ProjectSetup from '@/components/interview/ProjectSetup';
 
 const InterviewBuilder = () => {
   const navigate = useNavigate();
-  const [questions, setQuestions] = useState([
-    {
-      id: '1',
-      question: 'What problem were you trying to solve when you found our product?',
-      description: 'Understand the initial user pain point',
-    },
-    {
-      id: '2',
-      question: 'How are you currently solving this problem?',
-      description: 'Learn about existing alternatives and workflows',
-    },
-    {
-      id: '3',
-      question: 'What would make this product a must-have for you?',
-      description: 'Identify key features and value propositions',
-    },
-  ]);
+  const location = useLocation();
+  const preservedContext = location.state?.preservedContext;
+
+  // Initialize setupState with preserved context if available
+  const [setupState, setSetupState] = useState(() => {
+    if (preservedContext) {
+      return {
+        idea: preservedContext.projectName,
+        suggestions: preservedContext.suggestions || {},
+        selected: {
+          name: preservedContext.projectName,
+          audiences: Array.isArray(preservedContext.targetAudience) 
+            ? preservedContext.targetAudience 
+            : preservedContext.targetAudience.split(', '),
+          objectives: preservedContext.objectives
+        }
+      };
+    }
+    return {
+      idea: '',
+      suggestions: {},
+      selected: {
+        name: '',
+        audiences: [],
+        objectives: []
+      }
+    };
+  });
+
+  // Initialize questions with preserved context if available
+  const [questions, setQuestions] = useState(() => {
+    if (preservedContext?.questions) {
+      return preservedContext.questions.map((q: any, index: number) => ({
+        id: index.toString(),
+        question: q.question,
+        description: q.purpose
+      }));
+    }
+    return [
+      {
+        id: '1',
+        question: 'What problem were you trying to solve when you found our product?',
+        description: 'Understand the initial user pain point',
+      },
+      {
+        id: '2',
+        question: 'How are you currently solving this problem?',
+        description: 'Learn about existing alternatives and workflows',
+      },
+      {
+        id: '3',
+        question: 'What would make this product a must-have for you?',
+        description: 'Identify key features and value propositions',
+      },
+    ];
+  });
+
+  // Initialize generatedQuestions with preserved context
+  const [generatedQuestions, setGeneratedQuestions] = useState<Array<{ id: string, text: string, category: string }>>(
+    () => preservedContext?.generatedQuestions || []
+  );
+
+  // Set hasProjectContext based on preserved context
+  const [hasProjectContext, setHasProjectContext] = useState(!!preservedContext);
+
   const [newQuestion, setNewQuestion] = useState('');
   const [newQuestionDescription, setNewQuestionDescription] = useState('');
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedQuestions, setGeneratedQuestions] = useState<Array<{ id: string, text: string, category: string }>>([]);
   const [currentGeneratedIndex, setCurrentGeneratedIndex] = useState<number>(-1);
-  const [hasProjectContext, setHasProjectContext] = useState(false);
-  const [setupState, setSetupState] = useState<{
-    idea: string;
-    suggestions: {
-      names?: string[];
-      audiences?: string[];
-      objectives?: string[];
-    };
-    selected: {
-      name?: string;
-      audiences: string[];
-      objectives: string[];
-    };
-  }>({
-    idea: '',
-    suggestions: {},
-    selected: {
-      audiences: [],
-      objectives: []
-    }
-  });
 
   // Add useEffect to handle scrolling when context changes
   useEffect(() => {
@@ -428,9 +454,12 @@ const InterviewBuilder = () => {
                 {questions.length > 0 && (
                   <Link to="/interview-modes" state={{ 
                     interviewContext: {
+                      setupState, // Include the complete setupState
+                      generatedQuestions, // Include generated questions in context
                       projectName: setupState.selected.name || setupState.idea,
                       objectives: setupState.selected.objectives,
                       targetAudience: setupState.selected.audiences.join(', '),
+                      suggestions: setupState.suggestions, // Include suggestions
                       questions: questions.map(q => ({
                         question: q.question,
                         purpose: q.description
