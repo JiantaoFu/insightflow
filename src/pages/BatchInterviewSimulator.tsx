@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
-import { Sparkles, Save, ArrowLeft, Copy, Info } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Sparkles, Save, ArrowLeft, Copy, Info, Settings, ChevronDown, ChevronUp } from 'lucide-react';
 import PageTransition from '@/components/ui/PageTransition';
 import GlassCard from '@/components/common/GlassCard';
+import { Button } from '@/components/ui/button';
 import AnimatedButton from '@/components/common/AnimatedButton';
 import { Link, useLocation, Navigate, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import BatchInterviewTemplateEditor from '@/components/interview/BatchInterviewTemplateEditor';
+
 import batchInterviewService from '@/services/batchInterviewService';
 import { toast } from 'react-toastify';
 
@@ -17,6 +20,18 @@ const BatchInterviewSimulator = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const interviewContext = location.state?.interviewContext;
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
+  const [batchInterviewTemplate, setBatchInterviewTemplate] = useState('');
+
+  useEffect(() => {
+    // Load the template when component mounts
+    setBatchInterviewTemplate(batchInterviewService.getBatchInterviewTemplate());
+  }, []);
+
+  const handleResetTemplate = () => {
+    batchInterviewService.resetBatchInterviewTemplate();
+    setBatchInterviewTemplate(batchInterviewService.getBatchInterviewTemplate());
+  };
 
   // Redirect if no context is provided
   if (!interviewContext) {
@@ -33,6 +48,9 @@ const BatchInterviewSimulator = () => {
 
   const generateInterview = async () => {
     setIsGenerating(true);
+
+    batchInterviewService.setBatchInterviewTemplate(batchInterviewTemplate);
+
     try {
       const result = await batchInterviewService.generateInterview(interviewContext);
       setMessages(result.messages);
@@ -54,7 +72,7 @@ const BatchInterviewSimulator = () => {
     <PageTransition transition="fade">
       <div className="container mx-auto p-4">
         <div className="flex justify-between mb-6">
-          <AnimatedButton 
+          <AnimatedButton
             icon={<ArrowLeft />}
             onClick={() => navigate(-1)}
           >
@@ -99,8 +117,49 @@ const BatchInterviewSimulator = () => {
                     <li>Provide key insights and recommendations</li>
                   </ul>
                 </div>
+
+                {/* Advanced Options Toggle */}
+                <div className="mt-8 pt-6 border-t mb-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
+                    className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <Settings size={16} />
+                    Advanced Options
+                    {showAdvancedOptions ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                  </button>
+                </div>
+
+                {/* Template Editor */}
+                {showAdvancedOptions && (
+                  <div className="space-y-3 mb-6 p-4 border border-dashed rounded-lg bg-muted/30">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <h3 className="text-md font-semibold">Prompt Template</h3>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleResetTemplate}
+                        className="self-start sm:self-auto"
+                      >
+                        Reset to Default
+                      </Button>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Customize how the AI generates the batch interview
+                    </p>
+                    <div className="border rounded-lg bg-card p-2 sm:p-4">
+                      <BatchInterviewTemplateEditor
+                        batchInterviewTemplate={batchInterviewTemplate}
+                        onBatchInterviewTemplateChange={setBatchInterviewTemplate}
+                      />
+                    </div>
+                  </div>
+                )}
+
                 <div className="mt-6">
-                  <AnimatedButton 
+                  <AnimatedButton
                     icon={<Sparkles />}
                     onClick={startGenerator}
                     disabled={isGenerating}

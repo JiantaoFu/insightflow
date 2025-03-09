@@ -18,12 +18,43 @@ class ProjectAnalysisService {
   private ollamaService: OllamaService;
   private openAIService: OpenAIService;
   private preferredModel: 'ollama' | 'groq' | 'openai';
+  private defaultTemplate: string;
+
+  private static readonly DEFAULT_TEMPLATE = `You are an expert Product-Market Fit consultant. Analyze this project idea and provide suggestions.
+
+Project Idea:
+{{context.idea}}
+
+Provide analysis in this exact JSON format:
+{
+  "names": [
+    "3-4 suggested project names that are memorable and relevant"
+  ],
+  "audiences": [
+    "4-6 specific target audience segments, be very specific"
+  ],
+  "objectives": [
+    "4-5 key research objectives to validate with interviews"
+  ]
+}
+
+Requirements:
+1. Project names should be concise and memorable
+2. Audiences should be specific segments, not broad categories
+3. Objectives should be clear, measurable goals
+4. Use professional, business-oriented language
+5. Focus on validation and learning opportunities
+
+Respond ONLY with the JSON object, no other text.
+`;
 
   constructor() {
     this.groqService = new GroqService();
     this.ollamaService = new OllamaService();
     this.openAIService = new OpenAIService();
     this.preferredModel = (import.meta.env.VITE_PREFERRED_MODEL as 'ollama' | 'groq' | 'openai') || 'groq';
+    // Default template that can be customized
+    this.defaultTemplate = ProjectAnalysisService.DEFAULT_TEMPLATE;
   }
 
   private getService(): BaseModelService {
@@ -41,8 +72,25 @@ class ProjectAnalysisService {
     this.preferredModel = model;
   }
 
-  async analyzeProject(project: ProjectIdea): Promise<AnalysisResult> {
-    const prompt = this.constructPrompt(project);
+  // Get the current template
+  getTemplate(): string {
+    return this.defaultTemplate;
+  }
+
+  // Set a custom template
+  setTemplate(template: string) {
+    if (template && template.trim()) {
+      this.defaultTemplate = template;
+    }
+  }
+
+  // Reset to the original default template
+  resetTemplate() {
+    this.defaultTemplate = ProjectAnalysisService.DEFAULT_TEMPLATE;
+  }
+
+  async analyzeProject(project: ProjectIdea, customTemplate?: string): Promise<AnalysisResult> {
+    const prompt = this.constructPrompt(project, customTemplate);
     let lastError: Error | null = null;
     
     for (let attempt = 0; attempt < 3; attempt++) {
@@ -73,35 +121,11 @@ class ProjectAnalysisService {
     throw new Error(`Failed to analyze project after 3 attempts. ${lastError?.message}`);
   }
 
-  private constructPrompt(project: ProjectIdea): string {
-    return `
-    You are an expert Product-Market Fit consultant. Analyze this project idea and provide suggestions.
+  private constructPrompt(project: ProjectIdea, customTemplate?: string): string {
+    const template = customTemplate || this.defaultTemplate;
 
-    Project Idea:
-    ${project.idea}
-
-    Provide analysis in this exact JSON format:
-    {
-      "names": [
-        "3-4 suggested project names that are memorable and relevant"
-      ],
-      "audiences": [
-        "4-6 specific target audience segments, be very specific"
-      ],
-      "objectives": [
-        "4-5 key research objectives to validate with interviews"
-      ]
-    }
-
-    Requirements:
-    1. Project names should be concise and memorable
-    2. Audiences should be specific segments, not broad categories
-    3. Objectives should be clear, measurable goals
-    4. Use professional, business-oriented language
-    5. Focus on validation and learning opportunities
-
-    Respond ONLY with the JSON object, no other text.
-    `;
+    // Replace placeholders with actual values
+    return template.replace(/\{\{context\.idea\}\}/g, project.idea);
   }
 
   private extractJsonFromResponse(response: string): any {

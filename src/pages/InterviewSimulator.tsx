@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, Save, ArrowLeft, FastForward, RotateCw, Copy, Info } from 'lucide-react';
+import { Play, Pause, Save, ArrowLeft, Settings, ChevronDown, ChevronUp, RotateCw, Copy, Info } from 'lucide-react';
+import InterviewTemplateEditor from '@/components/interview/InterviewTemplateEditor';
+import { Button } from '@/components/ui/button';
 import PageTransition from '@/components/ui/PageTransition';
 import GlassCard from '@/components/common/GlassCard';
 import AnimatedButton from '@/components/common/AnimatedButton';
@@ -45,6 +47,11 @@ const InterviewSimulator = () => {
     keyFindings: [], 
     recommendations: [] 
   });
+
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
+  const [interviewerTemplate, setInterviewerTemplate] = useState('');
+  const [intervieweeTemplate, setIntervieweeTemplate] = useState('');
+  const [insightsTemplate, setInsightsTemplate] = useState('');
   
   // Create default personas if not provided in context
   const [interviewer] = useState(() => 
@@ -142,6 +149,12 @@ const InterviewSimulator = () => {
     });
   };
 
+  useEffect(() => {
+    setInterviewerTemplate(interviewService.getInterviewerTemplate());
+    setIntervieweeTemplate(interviewService.getIntervieweeTemplate());
+    setInsightsTemplate(interviewService.getInsightsTemplate());
+  }, []);
+
   // Scroll to the bottom of the messages container
   useEffect(() => {
     if (messagesContainerRef.current) {
@@ -164,7 +177,7 @@ const InterviewSimulator = () => {
         // Initial greeting
         const initialMessage: SimMessage = {
           id: Date.now().toString(),
-          content: "Hello! Thank you for participating in this research interview. I'd like to learn about your experiences with productivity tools. First, could you briefly tell me about your role?",
+          content: "Hello! Thank you for participating in this research interview. Could you briefly tell me about your role?",
           sender: 'interviewer',
           timestamp: new Date()
         };
@@ -248,6 +261,27 @@ const InterviewSimulator = () => {
     };
   }, [isSimulating, interviewService]); // Only depend on isSimulating
 
+  const handleResetInterviewerTemplate = () => {
+    interviewService.resetInterviewerTemplate();
+    setInterviewerTemplate(interviewService.getInterviewerTemplate());
+  };
+
+  const handleResetIntervieweeTemplate = () => {
+    interviewService.resetIntervieweeTemplate();
+    setIntervieweeTemplate(interviewService.getIntervieweeTemplate());
+  };
+
+  const handleResetInsightsTemplate = () => {
+    interviewService.resetInsightsTemplate();
+    setInsightsTemplate(interviewService.getInsightsTemplate());
+  };
+
+  const handleResetAllTemplates = () => {
+    handleResetInterviewerTemplate();
+    handleResetIntervieweeTemplate();
+    handleResetInsightsTemplate();
+  };
+
   const handleStartSimulation = () => {
     setIsSimulating(true);
   };
@@ -304,6 +338,9 @@ const InterviewSimulator = () => {
   }, [interviewState, messages]);
 
   const handleStartInterview = () => {
+    interviewService.setInterviewerTemplate(interviewerTemplate);
+    interviewService.setIntervieweeTemplate(intervieweeTemplate);
+    interviewService.setInsightsTemplate(insightsTemplate);
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setTimeout(() => {
       setHasStarted(true);
@@ -314,7 +351,7 @@ const InterviewSimulator = () => {
     <PageTransition transition="fade" className="min-h-screen">
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-between mb-6">
-          <AnimatedButton 
+          <AnimatedButton
             icon={<ArrowLeft />}
             onClick={() => navigate(-1)}
           >
@@ -325,8 +362,8 @@ const InterviewSimulator = () => {
         {!hasStarted ? (
           <GlassCard className="mb-6 p-6">
             <div className="flex items-start gap-4">
-              <Info className="w-6 h-6 text-primary mt-1" />
-              <div>
+              <Info className="w-6 h-6 text-primary mt-1 flex-shrink-0" />
+              <div className="w-full">
                 <h2 className="text-xl font-semibold mb-4">About Interactive Interview Simulation</h2>
                 <div className="space-y-4 text-muted-foreground">
                   <p>This mode will conduct a real-time interview simulation based on your project context:</p>
@@ -359,8 +396,54 @@ const InterviewSimulator = () => {
                     <li>Provide immediate feedback and insights</li>
                   </ul>
                 </div>
+
+                {/* Advanced Options Toggle */}
+                <div className="mt-8 pt-6 border-t mb-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
+                    className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <Settings size={16} />
+                    Advanced Options
+                    {showAdvancedOptions ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                  </button>
+                </div>
+
+                {/* Template Editor */}
+                {showAdvancedOptions && (
+                  <div className="space-y-3 mb-6 p-4 border border-dashed rounded-lg bg-muted/30 w-full">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <h3 className="text-md font-semibold">Prompt Templates</h3>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleResetAllTemplates}
+                        className="self-start sm:self-auto"
+                      >
+                        Reset to Default
+                      </Button>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Customize how the AI generates responses in the interview
+                    </p>
+                    {/* Simplified container structure */}
+                    <div className="border rounded-lg bg-card p-2 sm:p-4">
+                      <InterviewTemplateEditor
+                        interviewerTemplate={interviewerTemplate}
+                        intervieweeTemplate={intervieweeTemplate}
+                        insightsTemplate={insightsTemplate}
+                        onInterviewerTemplateChange={setInterviewerTemplate}
+                        onIntervieweeTemplateChange={setIntervieweeTemplate}
+                        onInsightsTemplateChange={setInsightsTemplate}
+                      />
+                    </div>
+                  </div>
+                )}
+
                 <div className="mt-6">
-                  <AnimatedButton 
+                  <AnimatedButton
                     icon={<Play />}
                     onClick={handleStartInterview}
                     className="w-full bg-primary hover:bg-primary/90"

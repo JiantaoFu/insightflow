@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Save, ArrowRight, Sparkles, ArrowLeftCircle, ArrowRightCircle, X, Edit, ArrowLeft } from 'lucide-react';
+import { Plus, Save, ArrowRight, Sparkles, ArrowLeftCircle, ArrowRightCircle, X, Edit, ArrowLeft, ChevronDown, ChevronUp, Settings } from 'lucide-react';
 import PageTransition from '@/components/ui/PageTransition';
 import GlassCard from '@/components/common/GlassCard';
 import AnimatedButton from '@/components/common/AnimatedButton';
@@ -12,6 +12,8 @@ import questionGenerationService from '@/services/questionGenerationService';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ProjectSetup from '@/components/interview/ProjectSetup';
+import PromptTemplateEditor from '@/components/interview/PromptTemplateEditor';
+import { Button } from '@/components/ui/button';
 
 const InterviewBuilder = () => {
   const navigate = useNavigate();
@@ -72,6 +74,10 @@ const InterviewBuilder = () => {
     ];
   });
 
+  const [promptTemplate, setPromptTemplate] = useState('');
+
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
+
   // Initialize generatedQuestions with preserved context
   const [generatedQuestions, setGeneratedQuestions] = useState<Array<{ id: string, text: string, category: string }>>(
     () => preservedContext?.generatedQuestions || []
@@ -88,6 +94,7 @@ const InterviewBuilder = () => {
 
   // Add useEffect to handle scrolling when context changes
   useEffect(() => {
+    setPromptTemplate(questionGenerationService.getTemplate());
     if (hasProjectContext) {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -122,7 +129,12 @@ const InterviewBuilder = () => {
     setNewQuestion('');
     setNewQuestionDescription('');
   };
-  
+
+  const handleResetTemplate = () => {
+    questionGenerationService.resetTemplate();
+    setPromptTemplate(questionGenerationService.getTemplate());
+  };
+
   const handleEditQuestion = (index: number, newQuestion: string, newDescription: string) => {
     const updatedQuestions = [...questions];
     updatedQuestions[index] = {
@@ -174,7 +186,10 @@ const InterviewBuilder = () => {
 
     setIsGenerating(true);
     try {
-      const generated = await questionGenerationService.generateInterviewQuestions({
+      // Save the current template before generating
+      questionGenerationService.setTemplate(promptTemplate);
+
+      const generated = await questionGenerationService.generateQuestions({
         objective: setupState.selected.objectives.join('\n'),
         targetInterviewee: setupState.selected.audiences.join(', '),
         domain: setupState.idea
@@ -371,6 +386,46 @@ const InterviewBuilder = () => {
                         <p className="text-sm text-muted-foreground">
                           Generate questions based on your project details
                         </p>
+
+                        {/* Advanced Options Toggle - MOVED ABOVE the generate button */}
+                        <div>
+                          <button
+                            type="button"
+                            onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
+                            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            <Settings size={16} />
+                            Advanced Options
+                            {showAdvancedOptions ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                          </button>
+                        </div>
+
+                        {/* Prompt Template Section - Only shown when advanced options are enabled */}
+                        {showAdvancedOptions && (
+                          <div className="space-y-3 p-4 border border-dashed rounded-lg bg-muted/30">
+                            <div className="flex items-center justify-between">
+                              <h3 className="text-md font-semibold">Prompt Template</h3>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={handleResetTemplate}
+                              >
+                                Reset to Default
+                              </Button>
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              Customize how AI generates questions using the template below
+                            </p>
+                            <div className="border rounded-lg bg-card">
+                              <PromptTemplateEditor
+                                template={promptTemplate}
+                                onChange={setPromptTemplate}
+                              />
+                            </div>
+                          </div>
+                        )}
+
                         <AnimatedButton
                           variant="default"
                           onClick={handleGenerateQuestions}
@@ -383,9 +438,10 @@ const InterviewBuilder = () => {
                         </AnimatedButton>
                       </div>
 
+
                       {/* Generated Questions */}
                       {generatedQuestions.length > 0 && (
-                        <div className="space-y-4">
+                        <div className="space-y-4 mt-2">
                           <div className="flex items-center gap-2 text-muted-foreground">
                             <Sparkles size={16} className="text-yellow-500" />
                             <span className="text-sm">Click Add to add questions to your list</span>

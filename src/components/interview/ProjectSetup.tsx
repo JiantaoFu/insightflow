@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import GlassCard from '@/components/common/GlassCard';
 import AnimatedButton from '@/components/common/AnimatedButton';
-import { Sparkles, Check, X, ArrowRight, PlusCircle } from 'lucide-react';
+import { Sparkles, Check, X, ArrowRight, PlusCircle, Settings, ChevronDown, ChevronUp } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import projectAnalysisService from '@/services/projectAnalysisService';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
@@ -57,11 +57,23 @@ const ProjectSetup: React.FC<ProjectSetupProps> = ({
     objectives: ''
   });
 
+  // New state for advanced options
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
+  const [promptTemplate, setPromptTemplate] = useState('');
+
+  // Load the default template when component mounts
+  useEffect(() => {
+    setPromptTemplate(projectAnalysisService.getTemplate());
+  }, []);
+
   const handleAnalyze = async () => {
     if (!idea.trim()) return;
     setIsAnalyzing(true);
     
     try {
+      // Save the current template before analyzing
+      projectAnalysisService.setTemplate(promptTemplate);
+
       const results = await projectAnalysisService.analyzeProject({ idea });
       // Update to merge with existing suggestions instead of replacing
       setSuggestions(prev => ({
@@ -143,6 +155,11 @@ const ProjectSetup: React.FC<ProjectSetupProps> = ({
     }
   };
 
+  const handleResetTemplate = () => {
+    projectAnalysisService.resetTemplate();
+    setPromptTemplate(projectAnalysisService.getTemplate());
+  };
+
   return (
     <div className={`space-y-6 transition-all duration-500 ${isTransitioning ? 'opacity-0 translate-y-4' : 'opacity-100'}`}>
       {/* Initial Idea Input */}
@@ -158,6 +175,53 @@ const ProjectSetup: React.FC<ProjectSetupProps> = ({
             rows={4}
             className="w-full"
           />
+
+          {/* Advanced Options Toggle */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
+              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Settings size={16} />
+              Advanced Options
+              {showAdvancedOptions ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            </button>
+          </div>
+
+          {/* Prompt Template Section - Only shown when advanced options are enabled */}
+          {showAdvancedOptions && (
+            <div className="space-y-3 p-4 border border-dashed rounded-lg bg-muted/30">
+              <div className="flex items-center justify-between">
+                <h3 className="text-md font-semibold">Analysis Prompt Template</h3>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm"
+                  onClick={handleResetTemplate}
+                >
+                  Reset to Default
+                </Button>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Customize how AI analyzes your project idea
+              </p>
+              <div className="border rounded-lg bg-card">
+                <div className="w-full p-3">
+                  <Textarea
+                    value={promptTemplate}
+                    onChange={(e) => setPromptTemplate(e.target.value)}
+                    className="w-full min-h-[200px] font-mono text-sm"
+                    placeholder="Enter your project analysis prompt template here..."
+                  />
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    <p>Use <code>{"{{context.idea}}"}</code> as a placeholder for the project idea</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           <AnimatedButton
             onClick={handleAnalyze}
             disabled={!idea.trim() || isAnalyzing}
@@ -330,7 +394,7 @@ const ProjectSetup: React.FC<ProjectSetupProps> = ({
           </AnimatedButton>
           <AnimatedButton
             onClick={handleComplete}
-            disabled={!selected.name || selected.audiences.length === 0}
+            disabled={!selected.name || selected.audiences.length === 0 || selected.objectives.length === 0}
             icon={<Check size={16} />}
             iconPosition="left"
           >

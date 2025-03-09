@@ -38,12 +38,104 @@ class InterviewSimulationService {
   private ollamaService: OllamaService;
   private openAIService: OpenAIService;
   private preferredModel: 'ollama' | 'groq' | 'openai';
+  private interviewerTemplate: string;
+  private intervieweeTemplate: string;
+  private insightsTemplate: string;
+
+  // Define the default templates as static readonly properties
+  private static readonly DEFAULT_INTERVIEWER_TEMPLATE = `You are conducting a user research interview for a product.
+
+You are an expert interviewer conducting user research:
+
+INTERVIEW OBJECTIVES:
+{{context.objectives}}
+
+TARGET AUDIENCE:
+{{context.targetAudience}}
+
+INTERVIEW QUESTIONS:
+{{context.questions}}
+
+IMPORTANT GUIDELINES:
+
+  - Conduct a natural, conversational interview, asking one focused question at a time.
+  - Follow up on unclear or interesting answers but limit each topic to one follow-up before moving forward.
+  - **One question at a time—avoid multi-part questions or complex phrasing.**
+  - Ensure smooth transitions between topics and avoid revisiting previous questions unless explicitly requested.
+  - Maintain a linear structure, following the predefined question list exactly.
+  - Keep the conversation purposeful—no excessive affirmations, small talk, or unnecessary prolonging.
+
+STYLE & FORMAT:
+
+  - Speak directly as the interviewer; do not introduce yourself or use special formatting, timestamps, dashes, colons, or bullet points.
+  - **NEVER include meta-commentary, notes to yourself, or explanations in parentheses**.
+  - **DO NOT include phrases like 'Note:' 'Purpose:' or explanations about your reasoning.**
+  - Be brief when transitioning topics, avoiding repetition.
+
+STATE MANAGEMENT:
+
+  - Wrapping up naturally once key objectives and questions are covered.
+  - **DO NOT ask any new questions or follow-ups once wrapping up.**
+  - Use [[STATE:COMPLETED]] only after final thoughts.
+
+IMPORTANT:
+
+  - Never include internal instructions in the output—just conduct the interview as intended.
+  - Move forward efficiently—avoid redundant questions or unnecessary delays.
+
+Now respond to the user as the interviewer.`;
+
+  private static readonly DEFAULT_INTERVIEWEE_TEMPLATE = `You are participating in a user research interview for a product.
+You are a participant in this research interview with this background: {{persona.background}}.
+
+### **GUIDELINES FOR YOUR RESPONSES**
+- **Give clear, thoughtful answers** based on your background.
+- **Share specific examples** when relevant.
+- **Keep responses CONCISE (2-4 sentences MAX).**
+- **Do NOT ask the interviewer questions.** Focus only on answering.
+- **Express both positive and negative opinions.**
+- **Avoid structured bullet points—stay conversational.**
+- **Show personality but keep it relevant.**
+- **Never introduce yourself with "Hi! I'm [name]" or similar greetings.**
+
+Now respond to the user as the interviewee.`;
+
+  private static readonly DEFAULT_INSIGHTS_TEMPLATE = `Analyze this product research interview conversation and generate structured insights in JSON format:
+
+Interview transcript:
+{{conversation}}
+
+Generate a JSON response with this structure:
+{
+  "keyFindings": [
+    "Finding 1",
+    "Finding 2",
+    ...
+  ],
+  "recommendations": [
+    "Recommendation 1",
+    "Recommendation 2",
+    ...
+  ]
+}
+
+Focus on:
+1. Pain points identified
+2. Current solutions and their limitations
+3. Feature requests and preferences
+4. Willingness to adopt new solutions
+5. Pricing sensitivity
+
+Keep findings and recommendations clear, specific, and actionable.`;
 
   constructor() {
     this.groqService = new GroqService();
     this.ollamaService = new OllamaService();
     this.openAIService = new OpenAIService();
     this.preferredModel = (import.meta.env.VITE_PREFERRED_MODEL as 'ollama' | 'groq' | 'openai') || 'groq';
+    this.interviewerTemplate = InterviewSimulationService.DEFAULT_INTERVIEWER_TEMPLATE;
+    this.intervieweeTemplate = InterviewSimulationService.DEFAULT_INTERVIEWEE_TEMPLATE;
+    this.insightsTemplate = InterviewSimulationService.DEFAULT_INSIGHTS_TEMPLATE;
   }
 
   private getService(): BaseModelService {
@@ -59,6 +151,48 @@ class InterviewSimulationService {
 
   setModel(model: 'ollama' | 'groq' | 'openai') {
     this.preferredModel = model;
+  }
+
+  getInterviewerTemplate(): string {
+    return this.interviewerTemplate;
+  }
+
+  getIntervieweeTemplate(): string {
+    return this.intervieweeTemplate;
+  }
+
+  getInsightsTemplate(): string {
+    return this.insightsTemplate;
+  }
+
+  // Set custom templates
+  setInterviewerTemplate(template: string) {
+    if (template && template.trim()) {
+      this.interviewerTemplate = template;
+    }
+  }
+
+  setIntervieweeTemplate(template: string) {
+    if (template && template.trim()) {
+      this.intervieweeTemplate = template;
+    }
+  }
+
+  setInsightsTemplate(template: string) {
+    if (template && template.trim()) {
+      this.insightsTemplate = template;
+    }
+  }
+  resetInterviewerTemplate() {
+    this.interviewerTemplate = InterviewSimulationService.DEFAULT_INTERVIEWER_TEMPLATE;
+  }
+
+  resetIntervieweeTemplate() {
+    this.intervieweeTemplate = InterviewSimulationService.DEFAULT_INTERVIEWEE_TEMPLATE;
+  }
+
+  resetInsightsTemplate() {
+    this.insightsTemplate = InterviewSimulationService.DEFAULT_INSIGHTS_TEMPLATE;
   }
 
   async conductInterview(
@@ -100,20 +234,16 @@ class InterviewSimulationService {
 
   private extractStateAndContent(fullResponse: string): { state: 'ongoing' | 'wrapping_up' | 'completed', content: string } {
     // Default state
-    let state: 'ongoing' | 'wrapping_up' | 'completed' = 'ongoing';
+    let state: 'ongoing' | 'completed' = 'ongoing';
     let content = fullResponse;
     
     // Look for state markers in the response using regex to handle markers anywhere in text
-    const wrappingUpMatch = content.match(/\[\[STATE:WRAPPING_UP\]\]/);
     const completedMatch = content.match(/\[\[STATE:COMPLETED\]\]/);
     
     content = content.replace(/\[\[STATE:COMPLETED\]\]/g, '');
-    content = content.replace(/\[\[STATE:WRAPPING_UP\]\]/g, '');
 
     if (completedMatch) {
       state = 'completed';
-    } else if (wrappingUpMatch) {
-      state = 'wrapping_up';
     }
     
     // Clean up the content
@@ -134,10 +264,18 @@ class InterviewSimulationService {
     persona: InterviewPersona,
     messages: Message[]
   ): { systemPrompt: string; messages: ModelMessage[] } {
-    const systemPrompt = `You are participating in a product research interview about ${context.projectName}.` +
-      (persona.role === 'interviewer' ? 
-        this.constructInterviewerPrompt(context) : 
-        this.constructParticipantPrompt(persona, context));
+    let template = '';
+    if (persona.role === 'interviewer') {
+      template = this.interviewerTemplate;
+    } else {
+      template = this.intervieweeTemplate;
+    }
+    const systemPrompt = template
+      .replace(/\{\{context\.projectName\}\}/g, context.projectName)
+      .replace(/\{\{context\.targetAudience\}\}/g, context.targetAudience)
+      .replace(/\{\{context\.objectives\}\}/g, context.objectives.map(obj => `- ${obj}`).join('\n'))
+      .replace(/\{\{persona\.background\}\}/g, persona.background)
+      .replace(/\{\{context\.questions\}\}/g, context.questions.map((q, i) => ` ${i+1}. ${q.question} (Purpose: ${q.purpose})`).join('\n'));
 
     // Convert each message to role/content pair
     const formattedMessages: ModelMessage[] = messages.map(m => ({
@@ -151,63 +289,6 @@ class InterviewSimulationService {
     };
   }
 
-  private constructInterviewerPrompt(context: InterviewContext): string {
-    return `
-You are an expert interviewer conducting user research:
-
-INTERVIEW OBJECTIVES:
-${context.objectives.map(obj => `- ${obj}`).join('\n')}
-
-TARGET AUDIENCE:
-${context.targetAudience}
-
-INTERVIEWER GUIDELINES:
-
-    Conduct a natural, conversational interview, asking one focused question at a time.
-    Follow up on unclear or interesting answers but limit each topic to one follow-up before moving forward.
-    One question at a time—avoid multi-part questions or complex phrasing.
-    Ensure smooth transitions between topics and avoid revisiting previous questions unless explicitly requested.
-    Maintain a linear structure, following the predefined question list exactly.
-    Keep the conversation purposeful—no excessive affirmations, small talk, or unnecessary prolonging.
-    Limit the interview to 10 rounds, wrapping up naturally once key objectives are covered.
-
-STYLE & FORMAT:
-
-    Speak directly as the interviewer; do not introduce yourself or use special formatting, timestamps, dashes, colons, or bullet points.
-    Do not label responses with "INTERVIEWER:"—just engage naturally.
-    Be brief when transitioning topics, avoiding repetition.
-
-STATE MANAGEMENT:
-
-    Progress the interview naturally, signaling key phases:
-        Use [[STATE:WRAPPING_UP]] when transitioning to closing.
-        Use [[STATE:COMPLETED]] only after final thoughts.
-        Never include both in the same response.
-
-IMPORTANT:
-
-    Never include internal instructions in the output—just conduct the interview as intended.
-    Enforce an exit condition: After 7 exchanges, begin transitioning to wrap-up.
-    Move forward efficiently—avoid redundant questions or unnecessary delays.
-`;
-  }
-
-  private constructParticipantPrompt(persona: InterviewPersona, context: InterviewContext): string {
-    return `
-You are a participant in this research interview with this background: ${persona.background}.
-
-### **GUIDELINES FOR YOUR RESPONSES**
-- **Give clear, thoughtful answers** based on your background.
-- **Share specific examples** when relevant.
-- **Keep responses CONCISE (2-4 sentences MAX).**
-- **Do NOT ask the interviewer questions.** Focus only on answering.
-- **Express both positive and negative opinions.**
-- **Avoid structured bullet points—stay conversational.**
-- **Show personality but keep it relevant.**
-- **Never introduce yourself with "Hi! I'm [name]" or similar greetings.**
-`;
-  }
-
   async saveConversation(projectId: string, messages: Message[]): Promise<void> {
     // TODO: Implement conversation storage
     // This could save to a database or file system
@@ -215,39 +296,27 @@ You are a participant in this research interview with this background: ${persona
   }
 
   async generateInsights(projectId: string, conversation: Message[]): Promise<string> {
-    const service = this.getService();
+    // Format the conversation for the template
+    const formattedConversation = conversation
+      .map(m => `${m.role.toUpperCase()}: ${m.content}`)
+      .join('\n');
     
-    const prompt = `
-Analyze this product research interview conversation and generate structured insights in JSON format:
+    // Replace placeholders in the insights template
+    const prompt = this.insightsTemplate.replace(/\{\{conversation\}\}/g, formattedConversation);
 
-${conversation.map(m => `${m.role.toUpperCase()}: ${m.content}`).join('\n')}
+    try {
+      const service = this.getService();
+      const response = await service.generateResponse(prompt);
 
-Generate a JSON response with this structure:
-{
-  "keyFindings": [
-    "Finding 1",
-    "Finding 2",
-    ...
-  ],
-  "recommendations": [
-    "Recommendation 1",
-    "Recommendation 2",
-    ...
-  ]
-}
+      if (response.error) {
+        throw new Error(`Model error: ${response.error}`);
+      }
 
-Focus on:
-1. Pain points identified
-2. Current solutions and their limitations
-3. Feature requests and preferences
-4. Willingness to adopt new solutions
-5. Pricing sensitivity
-
-Keep findings and recommendations clear, specific, and actionable.
-`;
-    
-    const response = await service.generateResponse(prompt);
-    return response.content;
+      return response.content;
+    } catch (error) {
+      console.error('Failed to generate insights:', error);
+      throw new Error(`Failed to generate insights: ${error}`);
+    }
   }
 }
 

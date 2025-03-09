@@ -31,12 +31,45 @@ class BatchInterviewService {
   private ollamaService: OllamaService;
   private openAIService: OpenAIService;
   private preferredModel: 'ollama' | 'groq' | 'openai';
+  private static readonly DEFAULT_BATCH_INTERVIEW_TEMPLATE = `Generate a complete product research interview simulation.
+
+PROJECT CONTEXT
+Name: {{context.projectName}}
+Goals: {{context.objectives}}
+Target Audience: {{context.targetAudience}}
+
+QUESTIONS TO COVER:
+{{context.questions}}
+
+REQUIREMENTS:
+1. Generate a natural conversation between interviewer and participant
+2. Cover all questions while maintaining flow
+3. Include relevant follow-up questions
+4. Keep responses concise and realistic
+5. End with a proper wrap-up
+6. NEVER include meta-commentary, notes to yourself, or explanations in parentheses
+7. DO NOT include phrases like "Note:" or explanations about your reasoning
+
+OUTPUT FORMAT:
+{
+  "messages": [
+    {"role": "interviewer", "content": "message"},
+    {"role": "interviewee", "content": "message"}
+  ],
+  "insights": {
+    "keyFindings": ["finding 1", "finding 2"],
+    "recommendations": ["recommendation 1", "recommendation 2"]
+  }
+}`;
+
+  private batchInterviewTemplate: string;
 
   constructor() {
     this.groqService = new GroqService();
     this.ollamaService = new OllamaService();
     this.openAIService = new OpenAIService();
     this.preferredModel = (import.meta.env.VITE_PREFERRED_MODEL as 'ollama' | 'groq' | 'openai') || 'groq';
+    this.batchInterviewTemplate = BatchInterviewService.DEFAULT_BATCH_INTERVIEW_TEMPLATE;
   }
 
   private getService(): BaseModelService {
@@ -54,35 +87,24 @@ class BatchInterviewService {
     this.preferredModel = model;
   }
 
-  async generateInterview(context: InterviewContext): Promise<BatchInterviewResult> {
-    const systemPrompt = `Generate a complete product research interview simulation.
-
-PROJECT CONTEXT
-Name: ${context.projectName}
-Goals: ${context.objectives.join(', ')}
-Target Audience: ${context.targetAudience}
-
-QUESTIONS TO COVER:
-${context.questions.map(q => `- ${q.question}`).join('\n')}
-
-REQUIREMENTS:
-1. Generate a natural conversation between interviewer and participant
-2. Cover all questions while maintaining flow
-3. Include relevant follow-up questions
-4. Keep responses concise and realistic
-5. End with a proper wrap-up
-
-OUTPUT FORMAT:
-{
-  "messages": [
-    {"role": "interviewer", "content": "message"},
-    {"role": "interviewee", "content": "message"}
-  ],
-  "insights": {
-    "keyFindings": ["finding 1", "finding 2"],
-    "recommendations": ["recommendation 1", "recommendation 2"]
+  getBatchInterviewTemplate(): string {
+    return this.batchInterviewTemplate;
   }
-}`;
+
+  setBatchInterviewTemplate(template: string): void {
+    this.batchInterviewTemplate = template;
+  }
+
+  resetBatchInterviewTemplate(): void {
+    this.batchInterviewTemplate = BatchInterviewService.DEFAULT_BATCH_INTERVIEW_TEMPLATE;
+  }
+
+  async generateInterview(context: InterviewContext): Promise<BatchInterviewResult> {
+    const systemPrompt = this.batchInterviewTemplate
+      .replace('{{context.projectName}}', context.projectName)
+      .replace('{{context.objectives}}', context.objectives.join(', '))
+      .replace('{{context.targetAudience}}', context.targetAudience)
+      .replace('{{context.questions}}', context.questions.map(q => `- ${q.question}`).join('\n'));
 
     try {
       const service = this.getService();
