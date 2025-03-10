@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import questionGenerationService from '@/services/questionGenerationService';
-import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ProjectSetup from '@/components/interview/ProjectSetup';
 import PromptTemplateEditor from '@/components/interview/PromptTemplateEditor';
