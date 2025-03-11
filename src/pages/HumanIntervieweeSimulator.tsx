@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, Save, ArrowLeft, Settings, ChevronDown, ChevronUp, RotateCw, Copy, Info } from 'lucide-react';
+import { Play, Pause, Save, ArrowLeft, Settings, ChevronDown, ChevronUp, RotateCw, Copy, Info, Mic, MicOff, Send } from 'lucide-react';
 import InterviewTemplateEditor from '@/components/interview/InterviewTemplateEditor';
 import { Button } from '@/components/ui/button';
 import PageTransition from '@/components/ui/PageTransition';
@@ -19,7 +19,7 @@ interface SimMessage {
   timestamp: Date;
 }
 
-const InterviewSimulator = () => {
+const HumanIntervieweeSimulator = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const interviewContext = location.state?.interviewContext;
@@ -35,9 +35,7 @@ const InterviewSimulator = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [isSimulating, setIsSimulating] = useState(false);
-  const [simulationSpeed, setSimulationSpeed] = useState<'slow' | 'normal' | 'fast'>('slow');
-  const [interviewState, setInterviewState] = useState<'ongoing' | 'asking_final_thoughts' | 'waiting_for_final_response' | 'completed'>('ongoing');
+  const [isInterviewActive, setIsInterviewActive] = useState(true); // Start as active
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const [hasStarted, setHasStarted] = useState(false);
   const [insights, setInsights] = useState<{ 
@@ -50,10 +48,10 @@ const InterviewSimulator = () => {
 
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const [interviewerTemplate, setInterviewerTemplate] = useState('');
-  const [intervieweeTemplate, setIntervieweeTemplate] = useState('');
   const [insightsTemplate, setInsightsTemplate] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
   
-  // Create default personas if not provided in context
+  // Create default interviewer persona if not provided in context
   const [interviewer] = useState(() => 
     interviewContext.personas?.interviewer || {
       role: 'interviewer' as const,
@@ -63,23 +61,16 @@ const InterviewSimulator = () => {
     }
   );
 
-  const [interviewee] = useState(() => 
-    interviewContext.personas?.interviewee || {
-      role: 'interviewee' as const,
-      background: `${interviewContext.targetAudience}`,
-      expertise: interviewContext.objectives,
-      personality: "Experienced professional with relevant domain knowledge"
-    }
-  );
-
   const [interviewService] = useState(() => InterviewSimulationService);
 
   const handleSendMessage = async () => {
     if (!newMessage.trim()) return;
     
-    const userMessage = {
-      role: 'interviewee' as const,
-      content: newMessage
+    const userMessage: SimMessage = {
+      id: Date.now().toString(),
+      content: newMessage,
+      sender: 'interviewee',
+      timestamp: new Date()
     };
     
     setMessages(prev => [...prev, userMessage]);
@@ -90,18 +81,25 @@ const InterviewSimulator = () => {
       const response = await interviewService.conductInterview(
         context,
         interviewer,
-        [...messages, userMessage]
+        messages.map(m => ({ role: m.sender, content: m.content })).concat({ role: 'interviewee', content: newMessage })
       );
       
-      const aiMessage = {
-        role: 'interviewer' as const,
-        content: response.content
+      const aiMessage: SimMessage = {
+        id: Date.now().toString(),
+        content: response.content,
+        sender: 'interviewer',
+        timestamp: new Date()
       };
       
       setMessages(prev => [...prev, aiMessage]);
+      
+      // Check if interview should end
+      if (response.state === 'completed') {
+        generateInsights();
+      }
     } catch (error) {
       console.error('Failed to get interviewer response:', error);
-      // TODO: Add error toast
+      toast.error('Failed to get interviewer response');
     } finally {
       setIsThinking(false);
     }
@@ -110,13 +108,13 @@ const InterviewSimulator = () => {
   const handleSaveTranscript = async () => {
     try {
       await interviewService.saveConversation(
-        'project-id', // TODO: Get from props/context
+        context.projectId || 'project-id', // Use project ID from context if available
         messages
       );
-      // TODO: Add success toast
+      toast.success('Transcript saved successfully!');
     } catch (error) {
       console.error('Failed to save transcript:', error);
-      // TODO: Add error toast
+      toast.error('Failed to save transcript');
     }
   };
 
@@ -130,28 +128,11 @@ const InterviewSimulator = () => {
   const toggleRecording = () => {
     setIsRecording(!isRecording);
     // In a real app, this would handle speech recognition
-  };
-
-  const addMessageWithDelay = async (message: SimMessage) => {
-    // console.log('Adding message with delay:', message);
-    const delays = {
-      slow: 8000,
-      normal: 5000,
-      fast: 1000
-    };
-
-    await new Promise(resolve => setTimeout(resolve, delays[simulationSpeed]));
-    setMessages(prev => {
-      console.log('Previous messages:', prev.length);
-      const updated = [...prev, message];
-      console.log('New messages length:', updated.length);
-      return updated;
-    });
+    toast.info(isRecording ? 'Voice recording stopped' : 'Voice recording started');
   };
 
   useEffect(() => {
     setInterviewerTemplate(interviewService.getInterviewerTemplate());
-    setIntervieweeTemplate(interviewService.getIntervieweeTemplate());
     setInsightsTemplate(interviewService.getInsightsTemplate());
   }, []);
 
@@ -162,122 +143,53 @@ const InterviewSimulator = () => {
     }
   }, [messages]);
 
-  // Move simulation logic to useEffect
+  // Start interview with initial greeting when hasStarted becomes true
   useEffect(() => {
     let isMounted = true;
 
-    async function startSimulation() {
-      console.log('Starting simulation in effect');
-      setMessages([]); // Clear messages state
+    const startInterview = async () => {
+      // Only start if we've clicked the "Start Interview" button and there are no messages yet
+      if (!hasStarted || !isInterviewActive || messages.length > 0) return;
       
+      setIsThinking(true);
       try {
-        // Create a local array to track conversation
-        const conversation: SimMessage[] = [];
-
-        // Get initial greeting from AI interviewer instead of using hardcoded message
-        setIsThinking(true);
-        const initialResponse = await interviewService.conductInterview(
+        // Initial greeting from AI interviewer
+        const response = await interviewService.conductInterview(
           context,
           interviewer,
           [] // Empty conversation to start
         );
-
+        
         if (!isMounted) return;
-
+        
         const initialMessage: SimMessage = {
           id: Date.now().toString(),
-          content: initialResponse.content,
+          content: response.content,
           sender: 'interviewer',
           timestamp: new Date()
         };
-
-        await addMessageWithDelay(initialMessage);
-        conversation.push(initialMessage);
-        setIsThinking(false);
-
-        let conversationLength = 0;
-        const maxExchanges = 20;
-
-        while (isMounted && isSimulating) {
-          console.log("Conversation length:", conversation.length);
-
-          // Interviewee's turn
-          const intervieweeResult = await interviewService.conductInterview(
-            context,
-            interviewee,
-            conversation.map(m => ({ role: m.sender, content: m.content }))
-          );
-
-          if (!isMounted || !isSimulating) break;
-          
-          const intervieweeMessage: SimMessage = {
-            id: Date.now().toString(),
-            content: intervieweeResult.content,
-            sender: 'interviewee',
-            timestamp: new Date()
-          };
-          await addMessageWithDelay(intervieweeMessage);
-          conversation.push(intervieweeMessage);  // Add to local conversation array
-
-          setInterviewState(intervieweeResult.state);
-          console.log('Interview state:', intervieweeResult.state);
-          
-          if (intervieweeResult.state === 'completed') break;
-
-          await new Promise(resolve => setTimeout(resolve, 500));
-          if (!isMounted || !isSimulating) break;
-
-          // Interviewer's turn
-          const interviewerResult = await interviewService.conductInterview(
-            context,
-            interviewer,
-            conversation.map(m => ({ role: m.sender, content: m.content }))
-          );
-
-          if (!isMounted || !isSimulating) break;
-          
-          const interviewerMessage: SimMessage = {
-            id: Date.now().toString(),
-            content: interviewerResult.content,
-            sender: 'interviewer',
-            timestamp: new Date()
-          };
-          await addMessageWithDelay(interviewerMessage);
-          conversation.push(interviewerMessage);  // Add to local conversation array
-
-          setInterviewState(interviewerResult.state);
-          console.log('Interview state:', interviewerResult.state);
-          
-          if (interviewerResult.state === 'completed') break;
-
-          conversationLength++;
-        }
+        
+        setMessages([initialMessage]);
       } catch (error) {
-        console.error('Simulation error:', error);
+        console.error('Failed to start interview:', error);
+        toast.error('Failed to start interview');
       } finally {
         if (isMounted) {
-          setIsSimulating(false);
+          setIsThinking(false);
         }
       }
-    }
+    };
 
-    if (isSimulating) {
-      startSimulation();
-    }
+    startInterview();
 
     return () => {
       isMounted = false;
     };
-  }, [isSimulating, interviewService]); // Only depend on isSimulating
+  }, [hasStarted, isInterviewActive, interviewService, context, interviewer, messages.length]);
 
   const handleResetInterviewerTemplate = () => {
     interviewService.resetInterviewerTemplate();
     setInterviewerTemplate(interviewService.getInterviewerTemplate());
-  };
-
-  const handleResetIntervieweeTemplate = () => {
-    interviewService.resetIntervieweeTemplate();
-    setIntervieweeTemplate(interviewService.getIntervieweeTemplate());
   };
 
   const handleResetInsightsTemplate = () => {
@@ -287,22 +199,21 @@ const InterviewSimulator = () => {
 
   const handleResetAllTemplates = () => {
     handleResetInterviewerTemplate();
-    handleResetIntervieweeTemplate();
     handleResetInsightsTemplate();
   };
 
-  const handleStartSimulation = () => {
-    setIsSimulating(true);
+  const handleStartInterview = () => {
+    setIsInterviewActive(true);
   };
 
-  const handleStopSimulation = () => {
-    setIsSimulating(false);
+  const handleStopInterview = () => {
+    setIsInterviewActive(false);
   };
 
   const handleCopyConversation = async () => {
     try {
       const text = messages.map(m => 
-        `${m.content}\n${m.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+        `${m.sender === 'interviewer' ? 'Interviewer' : 'You'}: ${m.content}\n${m.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
       ).join('\n\n') + '\n';
      
       navigator.clipboard.writeText(text)
@@ -314,16 +225,17 @@ const InterviewSimulator = () => {
           toast.error('Failed to copy conversation');
         });
     } catch (error) {
-      // Handle error
       toast.error('Failed to copy conversation');
     }
   };
 
-  // Add this function to generate insights when conversation ends
+  // Generate insights from the conversation
   const generateInsights = async () => {
+    if (messages.length < 2) return; // Need at least some conversation to generate insights
+    
     try {
       const result = await interviewService.generateInsights(
-        'project-id',
+        context.projectId || 'project-id',
         messages.map(m => ({
           role: m.sender,
           content: m.content
@@ -339,21 +251,22 @@ const InterviewSimulator = () => {
     }
   };
 
-  // Update the simulation effect to generate insights when completed
-  useEffect(() => {
-    if (interviewState === 'completed' && messages.length > 0) {
-      generateInsights();
-    }
-  }, [interviewState, messages]);
-
-  const handleStartInterview = () => {
+  const handleInitialSetup = () => {
     interviewService.setInterviewerTemplate(interviewerTemplate);
-    interviewService.setIntervieweeTemplate(intervieweeTemplate);
     interviewService.setInsightsTemplate(insightsTemplate);
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setTimeout(() => {
       setHasStarted(true);
-    }, 300); // Small delay to ensure scroll completes first
+      // Focus on input field after starting
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
+    }, 300);
+  };
+
+  const handleResetInterview = () => {
+    setMessages([]);
+    setIsInterviewActive(true); // Ensure interview is active after reset
   };
 
   return (
@@ -373,9 +286,9 @@ const InterviewSimulator = () => {
             <div className="flex items-start gap-4">
               <Info className="w-6 h-6 text-primary mt-1 flex-shrink-0" />
               <div className="w-full">
-                <h2 className="text-xl font-semibold mb-4">About Interactive Interview Simulation</h2>
+                <h2 className="text-xl font-semibold mb-4">Human Interviewee Mode</h2>
                 <div className="space-y-4 text-muted-foreground">
-                  <p>This mode will conduct a real-time interview simulation based on your project context:</p>
+                  <p>In this mode, you'll be interviewed by an AI based on your project context:</p>
                   <div className="space-y-4">
                     <div>
                       <h3 className="text-foreground font-medium mb-2">Project Details</h3>
@@ -397,12 +310,11 @@ const InterviewSimulator = () => {
                       </ul>
                     </div>
                   </div>
-                  <p>The AI will:</p>
+                  <p>The AI interviewer will:</p>
                   <ul className="list-disc pl-4 space-y-2">
-                    <li>Conduct a natural, interactive conversation</li>
-                    <li>Cover your prepared questions adaptively</li>
-                    <li>Add relevant follow-up questions based on responses</li>
-                    <li>Provide immediate feedback and insights</li>
+                    <li>Ask questions based on your project context</li>
+                    <li>Adapt follow-up questions based on your responses</li>
+                    <li>Provide insights after the interview is complete</li>
                   </ul>
                 </div>
 
@@ -441,11 +353,12 @@ const InterviewSimulator = () => {
                     <div className="border rounded-lg bg-card p-2 sm:p-4">
                       <InterviewTemplateEditor
                         interviewerTemplate={interviewerTemplate}
-                        intervieweeTemplate={intervieweeTemplate}
+                        intervieweeTemplate=""
                         insightsTemplate={insightsTemplate}
                         onInterviewerTemplateChange={setInterviewerTemplate}
-                        onIntervieweeTemplateChange={setIntervieweeTemplate}
+                        onIntervieweeTemplateChange={() => {}} // Not needed for human interviewee
                         onInsightsTemplateChange={setInsightsTemplate}
+                        hideIntervieweeTemplate={true} // Hide the interviewee template since it's not needed
                       />
                     </div>
                   </div>
@@ -454,10 +367,10 @@ const InterviewSimulator = () => {
                 <div className="mt-6">
                   <AnimatedButton
                     icon={<Play />}
-                    onClick={handleStartInterview}
+                    onClick={handleInitialSetup}
                     className="w-full bg-primary hover:bg-primary/90"
                   >
-                    Start Interactive Interview
+                    Start Interview
                   </AnimatedButton>
                 </div>
               </div>
@@ -468,47 +381,38 @@ const InterviewSimulator = () => {
             <div className="max-w-4xl mx-auto">
               <div className="flex justify-between items-center mb-6">
                 <div>
-                  <h1 className="text-3xl font-bold mb-2">Interview Simulator</h1>
+                  <h1 className="text-3xl font-bold mb-2">AI Interviewer</h1>
                   <p className="text-muted-foreground">
-                    Test your interview flow with our AI interviewer
+                    Respond to the AI interviewer's questions
                   </p>
                 </div>
               </div>
               
-              {/* Simulation Controls */}
+              {/* Interview Controls */}
               <div className="mb-4 flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  {isSimulating ? (
+                  {isInterviewActive ? (
                     <AnimatedButton
-                      onClick={handleStopSimulation}
+                      onClick={handleStopInterview}
                       icon={<Pause size={18} />}
                       variant="outline"
                     >
-                      Pause Simulation
+                      Pause Interview
                     </AnimatedButton>
                   ) : (
                     <AnimatedButton
-                      onClick={handleStartSimulation}
+                      onClick={handleStartInterview}
                       icon={<Play size={18} />}
                     >
-                      Start Simulation
+                      Resume Interview
                     </AnimatedButton>
                   )}
-                  <select
-                    value={simulationSpeed}
-                    onChange={(e) => setSimulationSpeed(e.target.value as any)}
-                    className="rounded-md border border-input bg-background px-3 py-2"
-                  >
-                    <option value="slow">Slow</option>
-                    <option value="normal">Normal</option>
-                    <option value="fast">Fast</option>
-                  </select>
                 </div>
                 <div className="flex items-center gap-2">
                   <AnimatedButton
                     variant="outline"
                     size="sm"
-                    onClick={() => setMessages([])}
+                    onClick={handleResetInterview}
                     icon={<RotateCw size={16} />}
                   >
                     Reset
@@ -518,6 +422,7 @@ const InterviewSimulator = () => {
                     size="sm"
                     onClick={handleCopyConversation}
                     icon={<Copy size={16} />}
+                    disabled={messages.length === 0}
                   >
                     Copy Conversation
                   </AnimatedButton>
@@ -526,6 +431,7 @@ const InterviewSimulator = () => {
                     size="sm"
                     onClick={handleSaveTranscript}
                     icon={<Save size={16} />}
+                    disabled={messages.length === 0}
                   >
                     Save Transcript
                   </AnimatedButton>
@@ -590,7 +496,42 @@ const InterviewSimulator = () => {
                     )}
                     
                     <div ref={messagesEndRef} />
-                    <ToastContainer position="bottom-right" />
+                  </div>
+                </div>
+
+                {/* Message Input */}
+                <div className="border-t border-border p-4">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      onClick={toggleRecording}
+                      className={cn(
+                        "rounded-full",
+                        isRecording && "text-red-500"
+                      )}
+                    >
+                      {isRecording ? <MicOff size={20} /> : <Mic size={20} />}
+                    </Button>
+                    <Input
+                      ref={inputRef}
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      placeholder="Type your response..."
+                      className="flex-1"
+                      disabled={!isInterviewActive || isThinking}
+                    />
+                    <Button
+                      type="button"
+                      size="icon"
+                      onClick={handleSendMessage}
+                      disabled={!newMessage.trim() || !isInterviewActive || isThinking}
+                      className="rounded-full"
+                    >
+                      <Send size={20} />
+                    </Button>
                   </div>
                 </div>
               </GlassCard>
@@ -623,8 +564,9 @@ const InterviewSimulator = () => {
           </>
         )}
       </div>
+      <ToastContainer position="bottom-right" />
     </PageTransition>
   );
 };
 
-export default InterviewSimulator;
+export default HumanIntervieweeSimulator;

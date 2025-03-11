@@ -97,6 +97,21 @@ const InterviewLanding = () => {
               </AnimatedButton>
             </Link>
           </GlassCard>
+
+          <GlassCard className="p-6">
+            <h2 className="text-xl font-semibold mb-2 flex items-center gap-2">
+              <Sparkles size={20} />
+              AI Interviewer v.s Human Interviewee
+            </h2>
+            <p className="text-muted-foreground mb-4">
+              AI interviewer will ask questions and record responses.
+            </p>
+            <Link to="/human-interviewee-simulator" state={{ interviewContext }}>
+              <AnimatedButton icon={<ArrowRight />} iconPosition="right">
+                Human Interviewee Mode
+              </AnimatedButton>
+            </Link>
+          </GlassCard>
         </div>
       </div>
     </PageTransition>

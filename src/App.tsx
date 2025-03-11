@@ -13,6 +13,7 @@ import Navbar from "./components/layout/Navbar";
 import Footer from "./components/layout/Footer";
 import InterviewLanding from '@/pages/InterviewLanding';
 import BatchInterviewSimulator from '@/pages/BatchInterviewSimulator';
+import HumanIntervieweeSimulator from './pages/HumanIntervieweeSimulator';
 
 const queryClient = new QueryClient();
 
@@ -33,6 +34,7 @@ const App = () => (
               <Route path="/insights" element={<Insights />} />
               <Route path="/interview-modes" element={<InterviewLanding />} />
               <Route path="/batch-interview" element={<BatchInterviewSimulator />} />
+              <Route path="/human-interviewee-simulator" element={<HumanIntervieweeSimulator />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </div>
