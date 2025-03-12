@@ -24,7 +24,7 @@ export class OpenAIService extends BaseModelService {
       const response = await axios.post(
         this.apiUrl,
         {
-          model: "gpt-4-turbo-preview",
+          model: "gpt-4o-mini",
           messages: formattedMessages,
           temperature: 0.7,
           max_tokens: 16380,
