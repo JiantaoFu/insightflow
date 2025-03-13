@@ -46,7 +46,26 @@ const InterviewBuilder = () => {
     };
   });
 
-  // Initialize questions with preserved context if available
+  // Default questions to use as fallback
+  const defaultQuestions = [
+    {
+      id: '1',
+      question: 'What problem were you trying to solve when you found our product?',
+      description: 'Understand the initial user pain point',
+    },
+    {
+      id: '2',
+      question: 'How are you currently solving this problem?',
+      description: 'Learn about existing alternatives and workflows',
+    },
+    {
+      id: '3',
+      question: 'What would make this product a must-have for you?',
+      description: 'Identify key features and value propositions',
+    },
+  ];
+
+  // Initialize questions with preserved context if available, or use AI-generated questions
   const [questions, setQuestions] = useState(() => {
     if (preservedContext?.questions) {
       return preservedContext.questions.map((q: any, index: number) => ({
@@ -55,24 +74,11 @@ const InterviewBuilder = () => {
         description: q.purpose
       }));
     }
-    return [
-      {
-        id: '1',
-        question: 'What problem were you trying to solve when you found our product?',
-        description: 'Understand the initial user pain point',
-      },
-      {
-        id: '2',
-        question: 'How are you currently solving this problem?',
-        description: 'Learn about existing alternatives and workflows',
-      },
-      {
-        id: '3',
-        question: 'What would make this product a must-have for you?',
-        description: 'Identify key features and value propositions',
-      },
-    ];
+    // Return empty array initially if no preserved context
+    return [];
   });
+
+  const [isLoadingQuestions, setIsLoadingQuestions] = useState(!preservedContext?.questions);
 
   const [promptTemplate, setPromptTemplate] = useState('');
 
@@ -250,6 +256,33 @@ const InterviewBuilder = () => {
       selected: context.selected
     });
     setHasProjectContext(true);
+
+    // Generate AI questions based on the project context
+    setIsLoadingQuestions(true);
+    questionGenerationService.generateQuestions({
+      objective: context.selected.objectives.join('\n'),
+      targetInterviewee: context.selected.audiences.join(', '),
+      idea: context.idea
+    })
+    .then(generatedQuestions => {
+      // Map the generated questions to the expected format
+      const formattedQuestions = generatedQuestions.map((q, index) => ({
+        id: index.toString(),
+        question: q.text,
+        description: q.category
+      }));
+
+      // Set the questions state with the generated questions
+      setQuestions(formattedQuestions);
+    })
+    .catch(error => {
+      console.error("Failed to generate questions:", error);
+      // Fallback to default questions if AI generation fails
+      setQuestions(defaultQuestions);
+    })
+    .finally(() => {
+      setIsLoadingQuestions(false);
+    });
   };
 
   // We should also scroll to top when going back to setup
@@ -368,11 +401,11 @@ const InterviewBuilder = () => {
                 )}
               </div>
 
-              {/* Add New Question Form */}
+              {/* Add More Question Form */}
               <GlassCard className="p-4">
                 <Tabs defaultValue="ai" className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-semibold">Add New Question</h2>
+                    <h2 className="text-xl font-semibold">Add More Question</h2>
                     <TabsList>
                       <TabsTrigger value="ai">AI</TabsTrigger>
                       <TabsTrigger value="manual">Manual</TabsTrigger>
