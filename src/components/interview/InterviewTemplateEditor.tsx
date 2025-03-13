@@ -10,6 +10,7 @@ interface InterviewTemplateEditorProps {
   onInterviewerTemplateChange: (value: string) => void;
   onIntervieweeTemplateChange: (value: string) => void;
   onInsightsTemplateChange: (value: string) => void;
+  hideIntervieweeTemplate?: boolean;
 }
 
 const InterviewTemplateEditor: React.FC<InterviewTemplateEditorProps> = ({ 
@@ -18,14 +19,17 @@ const InterviewTemplateEditor: React.FC<InterviewTemplateEditorProps> = ({
   insightsTemplate,
   onInterviewerTemplateChange,
   onIntervieweeTemplateChange,
-  onInsightsTemplateChange
+  onInsightsTemplateChange,
+  hideIntervieweeTemplate = false
 }) => {
   return (
     <div className="w-full">
       <Tabs defaultValue="interviewer" className="w-full">
         <TabsList className="mb-4 w-full flex flex-wrap h-auto">
           <TabsTrigger value="interviewer" className="flex-1">Interviewer</TabsTrigger>
-          <TabsTrigger value="interviewee" className="flex-1">Interviewee</TabsTrigger>
+          {!hideIntervieweeTemplate && (
+            <TabsTrigger value="interviewee" className="flex-1">Interviewee</TabsTrigger>
+          )}
           <TabsTrigger value="insights" className="flex-1">Insights</TabsTrigger>
         </TabsList>
         
