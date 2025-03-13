@@ -19,7 +19,7 @@ const PromptTemplateEditor: React.FC<PromptTemplateEditorProps> = ({
         placeholder="Enter your prompt template here..."
       />
       <div className="mt-2 text-xs text-muted-foreground">
-        <p>Use <code>{"{{context.objective}}"}</code>, <code>{"{{context.targetInterviewee}}"}</code>, and <code>{"{{context.domain}}"}</code> as placeholders</p>
+        <p>Use <code>{"{{context.objective}}"}</code>, <code>{"{{context.targetInterviewee}}"}</code>, and <code>{"{{context.idea}}"}</code> as placeholders</p>
       </div>
     </div>
   );

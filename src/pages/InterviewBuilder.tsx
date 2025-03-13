@@ -192,7 +192,7 @@ const InterviewBuilder = () => {
       const generated = await questionGenerationService.generateQuestions({
         objective: setupState.selected.objectives.join('\n'),
         targetInterviewee: setupState.selected.audiences.join(', '),
-        domain: setupState.idea
+        idea: setupState.idea
       });
 
       setGeneratedQuestions(generated.map(q => ({

@@ -6,7 +6,7 @@ import { BaseModelService } from './models/BaseModelService';
 interface QuestionGenerationContext {
   objective: string;
   targetInterviewee: string;
-  domain: string;
+  idea: string;
 }
 
 interface Question {
@@ -28,7 +28,7 @@ class QuestionGenerationService {
 Context:
 - Objective: {{context.objective}}
 - Target Interviewee: {{context.targetInterviewee}}
-- Domain: {{context.domain}}
+- Idea: {{context.idea}}
 
 Generate 5-7 open-ended interview questions that:
 1. Explore background and context
@@ -128,7 +128,7 @@ Provide questions in this JSON format:
     return template
       .replace(/\{\{context\.objective\}\}/g, context.objective)
       .replace(/\{\{context\.targetInterviewee\}\}/g, context.targetInterviewee)
-      .replace(/\{\{context\.domain\}\}/g, context.domain);
+      .replace(/\{\{context\.idea\}\}/g, context.idea);
   }
 
   private extractJsonFromResponse(response: string): any {
