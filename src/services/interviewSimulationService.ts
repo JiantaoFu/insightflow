@@ -124,6 +124,12 @@ Generate a JSON response with this structure:
   ]
 }
 
+Important formatting instructions:
+1. Return ONLY valid JSON without any additional text, markdown formatting, or code blocks
+2. Do not include the \`\`\`json and \`\`\` markers in your response
+3. Use double quotes for all keys and string values
+4. Include 3-5 key findings and 3-5 recommendations
+
 Focus on:
 1. Pain points identified
 2. Current solutions and their limitations
