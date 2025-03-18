@@ -64,9 +64,17 @@ const Index = () => {
                     Get Started
                   </AnimatedButton>
                 </Link>
-                <AnimatedButton variant="outline" size="lg" className="w-full sm:w-auto">
-                  Watch Demo
-                </AnimatedButton>
+                <Link to="/demo">
+                  <AnimatedButton 
+                    variant="secondary" 
+                    size="lg" 
+                    className="w-full sm:w-auto bg-gradient-to-r from-primary/20 to-primary/10 hover:from-primary/30 hover:to-primary/20"
+                    icon={<ZapIcon size={18} />}
+                    iconPosition="left"
+                  >
+                    Try Demo Interview
+                  </AnimatedButton>
+                </Link>
               </div>
             </PageTransition>
           </div>
@@ -194,9 +202,11 @@ const Index = () => {
                     Get Started Free
                   </AnimatedButton>
                 </Link>
-                <AnimatedButton variant="outline" size="lg" className="w-full sm:w-auto">
-                  Schedule a Demo
-                </AnimatedButton>
+                <Link to="/demo">
+                  <AnimatedButton variant="outline" size="lg" className="w-full sm:w-auto">
+                    Try Demo Interview
+                  </AnimatedButton>
+                </Link>
               </div>
             </GlassCard>
           </PageTransition>
