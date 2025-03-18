@@ -50,6 +50,17 @@ const HumanIntervieweeSimulator = () => {
   const [interviewerTemplate, setInterviewerTemplate] = useState('');
   const [insightsTemplate, setInsightsTemplate] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Add this useEffect to focus the input after AI responds
+  useEffect(() => {
+    // When the AI stops thinking and the interview is active, focus the input
+    if (!isThinking && isInterviewActive && hasStarted && inputRef.current) {
+      // Small timeout to ensure the UI has updated
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
+    }
+  }, [isThinking, isInterviewActive, hasStarted]);
   
   // Create default interviewer persona if not provided in context
   const [interviewer] = useState(() => 
