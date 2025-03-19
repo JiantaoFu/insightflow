@@ -373,29 +373,31 @@ const DemoInterview = () => {
           <AnimatedButton
             icon={<ArrowLeft />}
             onClick={() => navigate('/')}
+            className="text-sm md:text-base"
+            size="sm"
           >
-            Back to Home
+            Back
           </AnimatedButton>
         </div>
 
         <div className="max-w-4xl mx-auto">
           <div className="flex justify-between items-center mb-6">
             <div>
-              <h1 className="text-3xl font-bold mb-2">AI Researcher Demo</h1>
-              <p className="text-muted-foreground">
-                Chat with an AI researcher about your startup and product-market fit journey
+              <h1 className="text-2xl md:text-3xl font-bold mb-2">AI Researcher Demo</h1>
+              <p className="text-sm md:text-base text-muted-foreground">
+                Chat with an AI researcher about your startup
               </p>
             </div>
           </div>
           
-          {/* Interview Controls */}
-          <div className="mb-4 flex items-center justify-between">
-            <div className="flex items-center gap-4">
+          {/* Interview Controls - Responsive Layout */}
+          <div className="mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="w-full sm:w-auto">
               {!hasStarted ? (
                 <AnimatedButton
                   onClick={handleStartInterview}
                   icon={<Play size={18} />}
-                  className="bg-primary hover:bg-primary/90"
+                  className="bg-primary hover:bg-primary/90 w-full sm:w-auto"
                 >
                   Start Interview
                 </AnimatedButton>
@@ -404,6 +406,7 @@ const DemoInterview = () => {
                   onClick={handleStopInterview}
                   icon={<Pause size={18} />}
                   variant="outline"
+                  className="w-full sm:w-auto"
                 >
                   Pause Interview
                 </AnimatedButton>
@@ -411,17 +414,21 @@ const DemoInterview = () => {
                 <AnimatedButton
                   onClick={handleStartInterview}
                   icon={<Play size={18} />}
+                  className="w-full sm:w-auto"
                 >
                   Resume Interview
                 </AnimatedButton>
               )}
             </div>
-            <div className="flex items-center gap-2">
+            
+            {/* Action buttons in a responsive grid */}
+            <div className="grid grid-cols-3 gap-2 w-full sm:w-auto sm:flex sm:items-center sm:gap-2">
               <AnimatedButton
                 variant="outline"
                 size="sm"
                 onClick={handleResetInterview}
                 icon={<RotateCw size={16} />}
+                className="text-xs md:text-sm"
               >
                 Reset
               </AnimatedButton>
@@ -431,8 +438,9 @@ const DemoInterview = () => {
                 onClick={handleCopyConversation}
                 icon={<Copy size={16} />}
                 disabled={messages.length === 0}
+                className="text-xs md:text-sm"
               >
-                Copy Conversation
+                Copy
               </AnimatedButton>
               <AnimatedButton
                 variant="outline"
@@ -440,8 +448,9 @@ const DemoInterview = () => {
                 onClick={handleSaveTranscript}
                 icon={<Download size={16} />}
                 disabled={messages.length === 0}
+                className="text-xs md:text-sm"
               >
-                Download Transcript
+                Download
               </AnimatedButton>
             </div>
           </div>
@@ -449,13 +458,13 @@ const DemoInterview = () => {
           {/* Chat Interface */}
           <GlassCard className="mb-8 p-0 overflow-hidden">
             {/* Interview Header */}
-            <div className="bg-secondary/50 backdrop-blur-sm p-4 border-b border-border">
+            <div className="bg-secondary/50 backdrop-blur-sm p-3 md:p-4 border-b border-border">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <span className="text-primary text-lg font-semibold">AI</span>
+                <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <span className="text-primary text-base md:text-lg font-semibold">AI</span>
                 </div>
                 <div>
-                  <h3 className="font-medium">AI Researcher</h3>
+                  <h3 className="font-medium text-sm md:text-base">AI Researcher</h3>
                   <p className="text-xs text-muted-foreground">Startup Founder Interview</p>
                 </div>
               </div>
@@ -464,15 +473,15 @@ const DemoInterview = () => {
             {/* Messages or Welcome Screen */}
             <div 
               ref={messagesContainerRef} 
-              className="p-6 h-[500px] overflow-y-auto scrollbar-hidden"
+              className="p-4 md:p-6 h-[400px] md:h-[500px] overflow-y-auto scrollbar-hidden"
             >
               {!hasStarted ? (
-                <div className="h-full flex flex-col items-center justify-center text-center">
-                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                    <Play className="h-8 w-8 text-primary" />
+                <div className="h-full flex flex-col items-center justify-center text-center px-4">
+                  <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                    <Play className="h-6 w-6 md:h-8 md:w-8 text-primary" />
                   </div>
-                  <h3 className="text-xl font-semibold mb-2">Ready to start your interview?</h3>
-                  <p className="text-muted-foreground max-w-md mb-6">
+                  <h3 className="text-lg md:text-xl font-semibold mb-2">Ready to start your interview?</h3>
+                  <p className="text-sm md:text-base text-muted-foreground max-w-md mb-6">
                     Our AI researcher will ask you questions about your startup and product-market fit journey.
                   </p>
                   <Button 
@@ -484,7 +493,7 @@ const DemoInterview = () => {
                   </Button>
                 </div>
               ) : (
-                <div className="space-y-6">
+                <div className="space-y-4 md:space-y-6">
                   {messages.map((message) => (
                     <div 
                       key={message.id} 
@@ -495,7 +504,7 @@ const DemoInterview = () => {
                     >
                       <div 
                         className={cn(
-                          "max-w-[75%] rounded-2xl p-4",
+                          "max-w-[85%] md:max-w-[75%] rounded-2xl p-3 md:p-4 text-sm md:text-base",
                           message.sender === 'interviewee' 
                             ? "bg-primary text-primary-foreground" 
                             : "bg-secondary"
@@ -511,7 +520,7 @@ const DemoInterview = () => {
                   
                   {isThinking && (
                     <div className="flex justify-start">
-                      <div className="bg-secondary max-w-[75%] rounded-2xl p-4">
+                      <div className="bg-secondary max-w-[85%] md:max-w-[75%] rounded-2xl p-3 md:p-4">
                         <div className="flex space-x-2">
                           <div className="w-2 h-2 rounded-full bg-foreground/30 animate-pulse"></div>
                           <div className="w-2 h-2 rounded-full bg-foreground/30 animate-pulse" style={{ animationDelay: '0.2s' }}></div>
@@ -527,7 +536,7 @@ const DemoInterview = () => {
             </div>
 
             {/* Message Input */}
-            <div className="border-t border-border p-4">
+            <div className="border-t border-border p-3 md:p-4">
               <div className="flex items-center gap-2">
                 <Button
                   type="button"
@@ -540,7 +549,7 @@ const DemoInterview = () => {
                   )}
                   disabled={!hasStarted}
                 >
-                  {isRecording ? <MicOff size={20} /> : <Mic size={20} />}
+                  {isRecording ? <MicOff size={18} /> : <Mic size={18} />}
                 </Button>
                 <Input
                   ref={inputRef}
@@ -548,7 +557,7 @@ const DemoInterview = () => {
                   onChange={(e) => setNewMessage(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder={hasStarted ? "Type your response..." : "Start the interview to begin chatting..."}
-                  className="flex-1"
+                  className="flex-1 text-sm md:text-base"
                   disabled={!isInterviewActive || isThinking || !hasStarted}
                 />
                 <Button
@@ -558,7 +567,7 @@ const DemoInterview = () => {
                   disabled={!newMessage.trim() || !isInterviewActive || isThinking || !hasStarted}
                   className="rounded-full"
                 >
-                  <Send size={20} />
+                  <Send size={18} />
                 </Button>
               </div>
             </div>
@@ -566,9 +575,9 @@ const DemoInterview = () => {
 
           {/* Add Insights Display */}
           {insights.keyFindings.length > 0 && (
-            <GlassCard className="mt-8 p-6">
-              <h3 className="text-lg font-semibold mb-4">Interview Insights</h3>
-              <div className="grid gap-4">
+            <GlassCard className="mt-8 p-4 md:p-6">
+              <h3 className="text-base md:text-lg font-semibold mb-3 md:mb-4">Interview Insights</h3>
+              <div className="grid gap-4 text-sm md:text-base">
                 <div>
                   <h4 className="font-medium mb-2">Key Findings</h4>
                   <ul className="list-disc pl-4">

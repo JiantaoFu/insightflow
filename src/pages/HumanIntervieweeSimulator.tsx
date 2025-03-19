@@ -285,16 +285,18 @@ const HumanIntervieweeSimulator = () => {
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-between mb-6">
           <AnimatedButton
-            icon={<ArrowLeft />}
+            icon={<ArrowLeft size={18} />}
             onClick={() => navigate(-1)}
+            className="text-sm md:text-base"
+            size="sm"
           >
             Back
           </AnimatedButton>
         </div>
 
         {!hasStarted ? (
-          <GlassCard className="mb-6 p-6">
-            <div className="flex items-start gap-4">
+          <GlassCard className="mb-6 p-4 md:p-6">
+            <div className="flex flex-col md:flex-row items-start gap-4">
               <Info className="w-6 h-6 text-primary mt-1 flex-shrink-0" />
               <div className="w-full">
                 <h2 className="text-xl font-semibold mb-4">Human Interviewee Mode</h2>
@@ -352,7 +354,7 @@ const HumanIntervieweeSimulator = () => {
                         variant="outline"
                         size="sm"
                         onClick={handleResetAllTemplates}
-                        className="self-start sm:self-auto"
+                        className="self-start sm:self-auto text-xs md:text-sm"
                       >
                         Reset to Default
                       </Button>
@@ -379,7 +381,7 @@ const HumanIntervieweeSimulator = () => {
                   <AnimatedButton
                     icon={<Play />}
                     onClick={handleInitialSetup}
-                    className="w-full bg-primary hover:bg-primary/90"
+                    className="w-full bg-primary hover:bg-primary/90 text-sm md:text-base"
                   >
                     Start Interview
                   </AnimatedButton>
@@ -390,23 +392,24 @@ const HumanIntervieweeSimulator = () => {
         ) : (
           <>
             <div className="max-w-4xl mx-auto">
-              <div className="flex justify-between items-center mb-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3">
                 <div>
-                  <h1 className="text-3xl font-bold mb-2">AI Interviewer</h1>
-                  <p className="text-muted-foreground">
+                  <h1 className="text-2xl md:text-3xl font-bold mb-2">AI Interviewer</h1>
+                  <p className="text-sm md:text-base text-muted-foreground">
                     Respond to the AI interviewer's questions
                   </p>
                 </div>
               </div>
               
               {/* Interview Controls */}
-              <div className="mb-4 flex items-center justify-between">
-                <div className="flex items-center gap-4">
+              <div className="mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="w-full sm:w-auto">
                   {isInterviewActive ? (
                     <AnimatedButton
                       onClick={handleStopInterview}
                       icon={<Pause size={18} />}
                       variant="outline"
+                      className="w-full sm:w-auto text-sm md:text-base"
                     >
                       Pause Interview
                     </AnimatedButton>
@@ -414,17 +417,19 @@ const HumanIntervieweeSimulator = () => {
                     <AnimatedButton
                       onClick={handleStartInterview}
                       icon={<Play size={18} />}
+                      className="w-full sm:w-auto text-sm md:text-base"
                     >
                       Resume Interview
                     </AnimatedButton>
                   )}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="grid grid-cols-3 gap-2 w-full sm:w-auto sm:flex sm:items-center sm:gap-2">
                   <AnimatedButton
                     variant="outline"
                     size="sm"
                     onClick={handleResetInterview}
                     icon={<RotateCw size={16} />}
+                    className="text-xs md:text-sm"
                   >
                     Reset
                   </AnimatedButton>
@@ -434,8 +439,9 @@ const HumanIntervieweeSimulator = () => {
                     onClick={handleCopyConversation}
                     icon={<Copy size={16} />}
                     disabled={messages.length === 0}
+                    className="text-xs md:text-sm"
                   >
-                    Copy Conversation
+                    Copy
                   </AnimatedButton>
                   <AnimatedButton
                     variant="outline"
@@ -443,8 +449,9 @@ const HumanIntervieweeSimulator = () => {
                     onClick={handleSaveTranscript}
                     icon={<Save size={16} />}
                     disabled={messages.length === 0}
+                    className="text-xs md:text-sm"
                   >
-                    Save Transcript
+                    Save
                   </AnimatedButton>
                 </div>
               </div>
@@ -452,13 +459,13 @@ const HumanIntervieweeSimulator = () => {
               {/* Chat Interface */}
               <GlassCard className="mb-8 p-0 overflow-hidden">
                 {/* Interview Header */}
-                <div className="bg-secondary/50 backdrop-blur-sm p-4 border-b border-border">
+                <div className="bg-secondary/50 backdrop-blur-sm p-3 md:p-4 border-b border-border">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                      <span className="text-primary text-lg font-semibold">AI</span>
+                    <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      <span className="text-primary text-base md:text-lg font-semibold">AI</span>
                     </div>
                     <div>
-                      <h3 className="font-medium">AI Interviewer</h3>
+                      <h3 className="font-medium text-sm md:text-base">AI Interviewer</h3>
                       <p className="text-xs text-muted-foreground">Product Research Session</p>
                     </div>
                   </div>
@@ -467,9 +474,9 @@ const HumanIntervieweeSimulator = () => {
                 {/* Messages */}
                 <div 
                   ref={messagesContainerRef} 
-                  className="p-6 h-[500px] overflow-y-auto scrollbar-hidden"
+                  className="p-4 md:p-6 h-[400px] md:h-[500px] overflow-y-auto scrollbar-hidden"
                 >
-                  <div className="space-y-6">
+                  <div className="space-y-4 md:space-y-6">
                     {messages.map((message) => (
                       <div 
                         key={message.id} 
@@ -480,7 +487,7 @@ const HumanIntervieweeSimulator = () => {
                       >
                         <div 
                           className={cn(
-                            "max-w-[75%] rounded-2xl p-4",
+                            "max-w-[85%] md:max-w-[75%] rounded-2xl p-3 md:p-4 text-sm md:text-base",
                             message.sender === 'interviewee' 
                               ? "bg-primary text-primary-foreground" 
                               : "bg-secondary"
@@ -496,7 +503,7 @@ const HumanIntervieweeSimulator = () => {
                     
                     {isThinking && (
                       <div className="flex justify-start">
-                        <div className="bg-secondary max-w-[75%] rounded-2xl p-4">
+                        <div className="bg-secondary max-w-[85%] md:max-w-[75%] rounded-2xl p-3 md:p-4">
                           <div className="flex space-x-2">
                             <div className="w-2 h-2 rounded-full bg-foreground/30 animate-pulse"></div>
                             <div className="w-2 h-2 rounded-full bg-foreground/30 animate-pulse" style={{ animationDelay: '0.2s' }}></div>
@@ -511,7 +518,7 @@ const HumanIntervieweeSimulator = () => {
                 </div>
 
                 {/* Message Input */}
-                <div className="border-t border-border p-4">
+                <div className="border-t border-border p-3 md:p-4">
                   <div className="flex items-center gap-2">
                     <Button
                       type="button"
@@ -523,7 +530,7 @@ const HumanIntervieweeSimulator = () => {
                         isRecording && "text-red-500"
                       )}
                     >
-                      {isRecording ? <MicOff size={20} /> : <Mic size={20} />}
+                      {isRecording ? <MicOff size={18} /> : <Mic size={18} />}
                     </Button>
                     <Input
                       ref={inputRef}
@@ -531,7 +538,7 @@ const HumanIntervieweeSimulator = () => {
                       onChange={(e) => setNewMessage(e.target.value)}
                       onKeyDown={handleKeyDown}
                       placeholder="Type your response..."
-                      className="flex-1"
+                      className="flex-1 text-sm md:text-base"
                       disabled={!isInterviewActive || isThinking}
                     />
                     <Button
@@ -541,7 +548,7 @@ const HumanIntervieweeSimulator = () => {
                       disabled={!newMessage.trim() || !isInterviewActive || isThinking}
                       className="rounded-full"
                     >
-                      <Send size={20} />
+                      <Send size={18} />
                     </Button>
                   </div>
                 </div>
@@ -549,9 +556,9 @@ const HumanIntervieweeSimulator = () => {
 
               {/* Add Insights Display */}
               {insights.keyFindings.length > 0 && (
-                <GlassCard className="mt-8 p-6">
-                  <h3 className="text-lg font-semibold mb-4">Interview Insights</h3>
-                  <div className="grid gap-4">
+                <GlassCard className="mt-8 p-4 md:p-6">
+                  <h3 className="text-base md:text-lg font-semibold mb-3 md:mb-4">Interview Insights</h3>
+                  <div className="grid gap-4 text-sm md:text-base">
                     <div>
                       <h4 className="font-medium mb-2">Key Findings</h4>
                       <ul className="list-disc pl-4">
