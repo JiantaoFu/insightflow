@@ -1,5 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Play, Pause, Save, ArrowLeft, Settings, RotateCw, Copy, Mic, MicOff, Send, Download } from 'lucide-react';
+
+// Add type definition for the Web Speech API
+declare global {
+  interface Window {
+    SpeechRecognition: any;
+    webkitSpeechRecognition: any;
+  }
+}
 import { Button } from '@/components/ui/button';
 import PageTransition from '@/components/ui/PageTransition';
 import GlassCard from '@/components/common/GlassCard';
@@ -124,6 +132,7 @@ const DemoInterview = () => {
     recommendations: [] 
   });
   const inputRef = useRef<HTMLInputElement>(null);
+  const recognitionRef = useRef<any>(null);
 
   // Create interviewer persona
   const [interviewer] = useState(DEMO_INTERVIEW_CONTEXT.personas.interviewer);
@@ -141,6 +150,16 @@ const DemoInterview = () => {
       }, 100);
     }
   }, [isThinking, isInterviewActive, hasStarted]);
+
+  // Cleanup speech recognition on component unmount
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+        recognitionRef.current = null;
+      }
+    };
+  }, []);
 
   const handleSendMessage = async () => {
     if (!newMessage.trim()) return;
@@ -263,9 +282,56 @@ const DemoInterview = () => {
   };
   
   const toggleRecording = () => {
-    setIsRecording(!isRecording);
-    // In a real app, this would handle speech recognition
-    toast.info(isRecording ? 'Voice recording stopped' : 'Voice recording started');
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      toast.error('Speech recognition is not supported in your browser');
+      return;
+    }
+
+    if (isRecording) {
+      // Stop recording
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+        recognitionRef.current = null;
+      }
+      setIsRecording(false);
+      toast.info('Voice recording stopped');
+    } else {
+      // Start recording
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+      
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+      
+      recognition.onresult = (event: any) => {
+        const transcript = Array.from(event.results)
+          .map((result: any) => result[0])
+          .map((result: any) => result.transcript)
+          .join('');
+        
+        setNewMessage(prev => {
+          // If we already have text, add a space before the new transcript
+          const prefix = prev.trim() ? prev.trim() + ' ' : '';
+          return prefix + transcript;
+        });
+      };
+      
+      recognition.onerror = (event: any) => {
+        console.error('Speech recognition error', event.error);
+        toast.error(`Speech recognition error: ${event.error}`);
+        setIsRecording(false);
+      };
+      
+      recognition.onend = () => {
+        setIsRecording(false);
+      };
+      
+      recognition.start();
+      recognitionRef.current = recognition;
+      setIsRecording(true);
+      toast.info('Voice recording started - speak now');
+    }
   };
 
   // Scroll to the bottom of the messages container
@@ -547,7 +613,7 @@ const DemoInterview = () => {
                     "rounded-full",
                     isRecording && "text-red-500"
                   )}
-                  disabled={!hasStarted}
+                  disabled={!hasStarted || !isInterviewActive || isThinking}
                 >
                   {isRecording ? <MicOff size={18} /> : <Mic size={18} />}
                 </Button>
