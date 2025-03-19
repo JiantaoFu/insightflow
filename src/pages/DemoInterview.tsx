@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, Save, ArrowLeft, Settings, RotateCw, Copy, Mic, MicOff, Send } from 'lucide-react';
+import { Play, Pause, Save, ArrowLeft, Settings, RotateCw, Copy, Mic, MicOff, Send, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import PageTransition from '@/components/ui/PageTransition';
 import GlassCard from '@/components/common/GlassCard';
@@ -184,13 +184,71 @@ const DemoInterview = () => {
     }
   };
 
-  const handleSaveTranscript = async () => {
+  const handleSaveTranscript = () => {
+    if (messages.length === 0) {
+      toast.error('No conversation to save');
+      return;
+    }
+    
     try {
-      await interviewService.saveConversation(
-        context.projectId || 'demo-project',
-        messages
-      );
-      toast.success('Transcript saved successfully!');
+      // Format the transcript
+      let transcriptContent = `# AI Researcher Interview Transcript\n`;
+      transcriptContent += `Date: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}\n\n`;
+      
+      // Add interview context
+      transcriptContent += `## Interview Context\n`;
+      transcriptContent += `Project: ${context.projectName}\n`;
+      transcriptContent += `Target Audience: ${context.targetAudience}\n\n`;
+      
+      // Add objectives
+      transcriptContent += `## Objectives\n`;
+      context.objectives.forEach((obj, i) => {
+        transcriptContent += `${i+1}. ${obj}\n`;
+      });
+      transcriptContent += '\n';
+      
+      // Add conversation
+      transcriptContent += `## Conversation\n\n`;
+      messages.forEach(m => {
+        const role = m.sender === 'interviewer' ? 'AI Researcher' : 'You';
+        const time = new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        transcriptContent += `${role} (${time}):\n${m.content}\n\n`;
+      });
+      
+      // Add insights if available
+      if (insights.keyFindings.length > 0) {
+        transcriptContent += `## Key Findings\n`;
+        insights.keyFindings.forEach((finding, i) => {
+          transcriptContent += `${i+1}. ${finding}\n`;
+        });
+        transcriptContent += '\n';
+        
+        transcriptContent += `## Recommendations\n`;
+        insights.recommendations.forEach((rec, i) => {
+          transcriptContent += `${i+1}. ${rec}\n`;
+        });
+      }
+      
+      // Create a blob and download link
+      const blob = new Blob([transcriptContent], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      
+      // Set filename with date for uniqueness
+      const date = new Date();
+      const formattedDate = `${date.getFullYear()}-${(date.getMonth()+1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
+      const filename = `interview-transcript-${formattedDate}.txt`;
+      
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      
+      // Clean up
+      URL.revokeObjectURL(url);
+      document.body.removeChild(link);
+      
+      toast.success('Transcript downloaded successfully!');
     } catch (error) {
       console.error('Failed to save transcript:', error);
       toast.error('Failed to save transcript');
@@ -380,10 +438,10 @@ const DemoInterview = () => {
                 variant="outline"
                 size="sm"
                 onClick={handleSaveTranscript}
-                icon={<Save size={16} />}
+                icon={<Download size={16} />}
                 disabled={messages.length === 0}
               >
-                Save Transcript
+                Download Transcript
               </AnimatedButton>
             </div>
           </div>
