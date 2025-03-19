@@ -149,6 +149,10 @@ const DemoInterview = () => {
     };
   }, []);
 
+  useEffect(() => {
+    interviewService.setInterviewerTemplate(CUSTOM_INTERVIEWER_PROMPT);
+  }, []);
+
   const handleSendMessage = async () => {
     if (!newMessage.trim()) return;
     
